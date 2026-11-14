@@ -33,6 +33,15 @@ PATHS = {
  "pause":'<path d="M8 5v14M16 5v14"/>',
  "stop":'<rect x="5" y="5" width="14" height="14" rx="1"/>',
  "clock":'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+ "cube":'<path d="m12 2 9 5v10l-9 5-9-5V7zM3 7l9 5 9-5M12 12v10M7.5 4.5l9 5"/>',
+ "monitor":'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4m-5 0h10"/>',
+ "database":'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0"/>',
+ "chart":'<path d="M5 20V10m7 10V4m7 16V8"/>',
+ "folder":'<path d="M3 6h6l2 2h10v12H3zM3 6V4h6l2 2h9v2"/>',
+ "backup":'<path d="M7 18H5a4 4 0 0 1-1-8 8 8 0 0 1 15-1 5 5 0 0 1 0 10h-2M12 21V11m-4 4 4-4 4 4"/>',
+ "info":'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/>',
+ "check":'<path d="m5 12 4 4L19 6"/>',
+ "chevron":'<path d="m9 5 7 7-7 7"/>',
 }
 
 def asset(name: str) -> Path:
@@ -64,7 +73,19 @@ def bubble_icon(name,background,foreground,size=36):
     renderer=QSvgRenderer(QByteArray(data.encode())); painter=QPainter(pixmap); renderer.render(painter); painter.end(); pixmap.setDevicePixelRatio(2)
     return QIcon(pixmap)
 
+def dropdown_popup_stylesheet(c):
+    return f'''
+    QListView {{ background: {c['panel']}; color: {c['text']}; border: 1px solid {c['line']}; border-radius: 10px; padding: 5px; outline: 0; selection-background-color: {c['lavender']}; selection-color: {c['text']}; }}
+    QListView::item {{ min-height: 24px; padding: 6px 10px; border: none; border-radius: 6px; }}
+    QListView::item:hover {{ background: {c['soft']}; }}
+    QListView::item:selected {{ background: {c['lavender']}; color: {c['text']}; }}
+    QListView::item:disabled {{ color: {c['muted']}; background: transparent; }}
+    '''
+
 def stylesheet(c: dict) -> str:
+    mode='dark' if c['bg']==DARK['bg'] else 'light'
+    arrow_down=asset(f'icons/chevron-down-{mode}.svg').as_posix()
+    arrow_up=asset(f'icons/chevron-up-{mode}.svg').as_posix()
     return f'''
     QWidget {{ font-family: "Segoe UI", "Noto Sans", "Noto Sans SC"; font-size: 12px; color: {c['text']}; }}
     QMainWindow, QWidget#workspace {{ background: {c['bg']}; }}
@@ -81,9 +102,14 @@ def stylesheet(c: dict) -> str:
     QPushButton[primary="true"] {{ background: {c['primary']}; color: {c['on_primary']}; border-color: {c['primary']}; font-weight: 600; }}
     QPushButton[danger="true"] {{ color: {c['danger']}; }}
     QPushButton:disabled {{ color: {c['muted']}; background: {c['soft']}; }}
-    QLineEdit, QComboBox, QPlainTextEdit, QTextEdit, QSpinBox {{ background: {c['panel']}; border: 1px solid {c['line']}; border-radius: 7px; padding: 7px; selection-background-color: {c['selected']}; }}
-    QComboBox {{ min-height: 19px; }}
-    QComboBox QAbstractItemView {{ background: {c['panel']}; selection-background-color: {c['lavender']}; color: {c['text']}; }}
+    QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox {{ background: {c['panel']}; border: 1px solid {c['line']}; border-radius: 7px; padding: 7px; selection-background-color: {c['selected']}; }}
+    QComboBox {{ background: {c['panel']}; border: 1px solid {c['line']}; border-radius: 9px; padding: 6px 8px 6px 12px; min-height: 20px; selection-background-color: {c['lavender']}; }}
+    QComboBox:hover {{ border-color: {c['focus']}; background: {c['soft']}; }}
+    QComboBox:focus, QComboBox:on {{ border-color: {c['focus']}; background: {c['panel']}; }}
+    QComboBox:disabled {{ color: {c['muted']}; background: {c['soft']}; border-color: {c['line']}; }}
+    QComboBox::drop-down {{ subcontrol-origin: padding; subcontrol-position: top right; width: 30px; border: none; background: transparent; border-top-right-radius: 9px; border-bottom-right-radius: 9px; }}
+    QComboBox::down-arrow {{ image: url("{arrow_down}"); width: 14px; height: 14px; }}
+    QComboBox::down-arrow:on {{ image: url("{arrow_up}"); }}
     QScrollArea {{ border: none; background: transparent; }}
     QScrollArea > QWidget > QWidget {{ background: transparent; }}
     QScrollBar:vertical {{ background: transparent; width: 9px; margin: 2px; }}

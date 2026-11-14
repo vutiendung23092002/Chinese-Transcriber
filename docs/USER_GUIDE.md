@@ -17,6 +17,17 @@ Hai cột bên trái giữ cùng chiều rộng khi chuyển tab. Chỉ vùng l�
 3. Chọn model và mức suy luận được tài khoản hỗ trợ. Danh sách lấy trực tiếp từ Codex; lựa chọn không khả dụng không được tự thay thế.
 4. Kiểm tra ba mô hình ASR đã có: SenseVoiceSmall INT8, Streaming Paraformer INT8 và Silero VAD. Bản portable đầy đủ đã kèm chúng. Bản không kèm model có nút tải và chọn thư mục.
 
+## Cài đặt & Codex
+
+Trang cài đặt chia sáu thẻ theo thiết kế đã duyệt. Cột trái đưa đến từng nhóm; cửa sổ thấp hoặc hẹp chỉ cuộn phần bên phải.
+
+- Kết nối Codex: xem trạng thái, đăng nhập lại; Đường dẫn & chi tiết mở lựa chọn codex.exe. Hướng dẫn đăng nhập / Tài liệu chứa lệnh và liên kết trợ giúp.
+- Hạn mức: thanh thể hiện phần trăm đã dùng do Codex trả về; thiếu số liệu thì hiện thông báo, không coi là 0%.
+- Mô hình dịch mặc định: chọn model/effort rồi nhấn Lưu mặc định. Xem danh sách hiển thị khả dụng và mức suy luận. Lựa chọn cũ không được hỗ trợ được giữ có cảnh báo.
+- Giao diện: nhấn ô Sáng hoặc Tối để áp dụng; vị trí đang xem trong trang cài đặt được giữ.
+- Nhận dạng: xem ba model đã tải hay chưa, chỉnh số luồng CPU (1–4), mở Quản lý mô hình để tải hoặc đổi thư mục.
+- Dữ liệu: Sao lưu ngay sao lưu SQLite; Mở thư mục truy cập thư viện. Nếu có tác vụ gián đoạn, lối phục hồi xuất hiện tại đây.
+
 ## Dịch file
 
 Chọn Dịch file ghi âm, kéo thả hoặc chọn WAV, MP3, M4A, FLAC, OGG, AAC hay định dạng FFmpeg đọc được. File ngoài của bạn được giữ nguyên; ứng dụng sao chép một bản vào thư viện và dùng SHA-256 để tránh nhập trùng nội dung.

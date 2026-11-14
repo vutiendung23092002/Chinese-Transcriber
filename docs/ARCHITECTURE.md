@@ -5,6 +5,7 @@
 - app.py: entry point, khóa một cửa sổ cho mỗi thư viện, logging, backup, chế độ portable và kiểm tra runtime.
 - window.py / widgets.py / theme.py: shell PySide6, rail vẽ bằng QPainterPath, cột tác vụ cố định, theme và icon SVG. Không có trình duyệt nhúng.
 - workspace.py: các trang native, điều phối tác vụ, timeline, playback, hiệu đính, glossary, thư viện và xác nhận xóa.
+- settings_page.py: trang Cài đặt theo ảnh đã duyệt; sáu thẻ native, điều hướng nhóm, hạn mức thật, chọn model/effort, xem trước theme và hộp thoại cấu hình nâng cao. Không ghi đè lựa chọn mặc định trước khi nhấn Lưu.
 - storage.py: SQLite, transaction, SHA-256, quan hệ nguồn/transcript/phiên bản, job và backup.
 - audio.py: FFmpeg CPU, giải mã theo luồng mono 16 kHz, timestamp và xuất TXT nguyên tử.
 - models.py / asr.py: tải/kiểm tra model, Silero VAD, SenseVoiceSmall và Streaming Paraformer.

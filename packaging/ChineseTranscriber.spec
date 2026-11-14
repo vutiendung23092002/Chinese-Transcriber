@@ -6,7 +6,7 @@ from PyInstaller.utils.hooks import collect_dynamic_libs, collect_data_files, co
 root=Path(SPECPATH).parent
 native=collect_dynamic_libs('sherpa_onnx')
 native.append((imageio_ffmpeg.get_ffmpeg_exe(),'bin'))
-data=[(str(root/'assets/fonts'),'assets/fonts'),(str(root/'assets/logo-concepts'),'assets/logo-concepts')]
+data=[(str(root/'assets/fonts'),'assets/fonts'),(str(root/'assets/logo-concepts'),'assets/logo-concepts'),(str(root/'assets/icons'),'assets/icons')]
 for package in ('PySide6','PySide6_Essentials','PySide6_Addons','shiboken6','numpy','cffi','pycparser','imageio-ffmpeg','attrs','referencing','rpds-py','typing_extensions','jsonschema','jsonschema_specifications','platformdirs','sounddevice','soundfile','sherpa_onnx','sherpa-onnx-core','psutil'):
     try: data+=copy_metadata(package)
     except Exception: pass

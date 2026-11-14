@@ -1,8 +1,8 @@
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
-    QScrollArea, QGridLayout, QComboBox, QApplication)
+    QScrollArea, QGridLayout, QApplication)
 from .theme import LIGHT, DARK, stylesheet, icon, asset
-from .widgets import PAGES, Rail, label, button, box, card, clear
+from .widgets import PAGES, Rail, ComboBox, label, button, box, card, clear
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -31,7 +31,11 @@ class MainWindow(QMainWindow):
         self.workspace_layout = QVBoxLayout(self.workspace)
         self.workspace_layout.setContentsMargins(26,24,26,20); self.workspace_layout.setSpacing(18)
         self.header = QHBoxLayout()
-        self.title = label('Không gian học tập','title'); self.header.addWidget(self.title,1)
+        self.heading_block=QWidget(); heading_layout=QVBoxLayout(self.heading_block)
+        heading_layout.setContentsMargins(0,0,0,0); heading_layout.setSpacing(5)
+        self.title = label('Không gian học tập','title'); heading_layout.addWidget(self.title)
+        self.subtitle=label('','muted'); self.subtitle.hide(); heading_layout.addWidget(self.subtitle)
+        self.header.addWidget(self.heading_block,1)
         self.workspace_layout.addLayout(self.header)
         self.scroll = QScrollArea(); self.scroll.setWidgetResizable(True)
         self.content = QWidget(); self.content_layout = QVBoxLayout(self.content)
@@ -55,7 +59,7 @@ class MainWindow(QMainWindow):
             self.dashboard()
         elif page == 'settings':
             panel, body = card('Giao diện')
-            choices = QComboBox(); choices.addItems(['Sáng','Tối'])
+            choices = ComboBox(); choices.addItems(['Sáng','Tối'])
             choices.setCurrentIndex(1 if self.colors['bg']==DARK['bg'] else 0)
             choices.currentIndexChanged.connect(self.change_theme)
             body.addWidget(choices)

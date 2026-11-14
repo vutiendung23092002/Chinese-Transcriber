@@ -10,10 +10,12 @@ Người dùng đã phê duyệt Pastel Light và cho phép triển khai ứng d
 | 2. Storage/library | SQLite, import/SHA-256, dùng chung audio, transcript và nhiều version, trash/restore/purge, backup | Test quan hệ, import đồng thời, xóa bản riêng, khôi phục nhóm và dữ liệu đã xóa trước đạt |
 | 3. Speech-to-text | File SenseVoice/VAD; live Paraformer interim + SenseVoice final; journal thu liên tục | ASR thật và WAV replay qua capture đạt; benchmark cả hai model trên cùng fixture. Micro Bluetooth hiện có trả 0 frame; nghiệm thu thu giọng nói vật lý còn chờ thiết bị có tín hiệu |
 | 4. Translation | Codex app-server thật, kiểm tra model/effort, context/glossary, JSON/ID, retry/cancel, quota khi khả dụng | CLI đã cài trả đủ 8 model; dịch thật thành công; JSON sai/thiếu/trùng bị từ chối; không thay model ngầm |
-| 5. Integration | Timeline cùng hàng, playback/tua/tốc độ, hiệu đính tạo bản mới, TXT, so sánh, phục hồi | Luồng thật từ WAV đến hai TXT đạt; lỗi ASR không mất PCM, lỗi dịch không mất đoạn xong; tổng 20 test đạt |
+| 5. Integration | Timeline cùng hàng, playback/tua/tốc độ, hiệu đính tạo bản mới, TXT, so sánh, phục hồi | Luồng thật từ WAV đến hai TXT đạt; lỗi ASR không mất PCM, lỗi dịch không mất đoạn xong; tổng 24 test đạt |
 | 6. Distribution | EXE PyInstaller đã build; gói portable có model/font/FFmpeg, hướng dẫn/checksum và launcher Python PSF | Run.bat trong gói cuối đạt smoke/ASR/Codex/WAV-MP3-M4A/SQLite. Một EXE trước đạt, nhưng EXE cuối chưa nghiệm thu chạy vì Smart App Control chặn chữ ký (4551) |
 
 Mã thực thi nằm tại src/chinese_transcriber. Không nhúng QtWebEngine, trình duyệt hoặc Electron. Các màn hình Phase 1 chỉ còn là tài liệu tham chiếu đã duyệt, không dùng làm runtime.
+
+Trang Cài đặt & Codex đã được thiết kế lại theo ảnh settings-redesign-v1.png do người dùng chốt: sáu thẻ, điều hướng nhóm, quota dạng thanh, chọn theme bằng ô xem trước và các chi tiết nằm trong hộp thoại. Đã đối chiếu screenshot widget native ở năm kích thước, Light/Dark; kiểm tra thêm bằng backend Qt Windows và CLI thật. Bản chạy Python hiện tại được cập nhật; thay đổi UI này chưa tạo một EXE đã ký mới.
 
 ## Môi trường xác minh
 

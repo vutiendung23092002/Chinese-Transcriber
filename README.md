@@ -25,7 +25,7 @@ Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--p
 
 ## Kết quả xác minh và giới hạn
 
-Python launcher trong gói cuối đã chạy ASR → Codex thật → hai TXT; Qt giải mã WAV/MP3/M4A, SQLite integrity và nguồn dùng chung đều đạt. Bộ kiểm tra tự động có 20 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Một bản EXE trước đã qua luồng này; EXE cuối chưa thể nghiệm thu chạy vì Smart App Control chặn, không đánh đồng với kết quả Python launcher.
+Python launcher trong gói đã chạy ASR → Codex thật → hai TXT; Qt giải mã WAV/MP3/M4A, SQLite integrity và nguồn dùng chung đều đạt. Bộ kiểm tra source hiện có 24 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Trang Cài đặt mới triển khai theo ảnh đã duyệt, kiểm tra thêm bằng Qt Windows và Codex thật ở năm kích thước. Một bản EXE trước đã qua luồng ASR/dịch; EXE hiện chưa thể nghiệm thu chạy vì Smart App Control chặn, không đánh đồng với kết quả Python launcher.
 
 Microphone Bluetooth soundcore R60i NC trên máy phát triển được nhận diện nhưng cả PortAudio và Qt trả **0 mẫu âm thanh**. Pipeline live đã qua kiểm tra bằng WAV tiếng Trung chính thức đưa vào đầu vào capture, dùng ASR/Codex thật; chưa xác nhận thu giọng nói trực tiếp trên thiết bị này. Ứng dụng báo chờ dữ liệu và không báo thành công với bản ghi rỗng.
 

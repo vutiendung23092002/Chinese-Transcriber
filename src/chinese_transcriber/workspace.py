@@ -4,22 +4,23 @@ import os
 from pathlib import Path
 import threading
 from PySide6.QtCore import Qt, QThreadPool, QTimer, QUrl, QSize, QObject, Signal
-from PySide6.QtGui import QDesktopServices, QStandardItemModel, QFont
+from PySide6.QtGui import QFont
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QGridLayout,QComboBox,
+from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QGridLayout,
     QPlainTextEdit,QLineEdit,QFileDialog,QMessageBox,QTableWidget,QTableWidgetItem,
     QHeaderView,QAbstractItemView,QListWidget,QListWidgetItem,QDialog,QDialogButtonBox,
-    QCheckBox,QInputDialog,QSlider,QSpinBox,QProgressBar,QApplication,QToolButton,QSplitter)
+    QCheckBox,QInputDialog,QSlider,QProgressBar,QApplication,QToolButton,QSplitter)
 from .window import MainWindow
-from .widgets import PAGES,label,button,box,card,clear
+from .widgets import PAGES,label,button,tonal_button,box,card,clear,ComboBox
 from .theme import LIGHT,DARK,stylesheet,icon,bubble_icon
 from .storage import Store
 from .audio import audio_info,timestamp,export_txt
 from .workers import Task
-from .models import ModelManager, CATALOG
+from .models import ModelManager
 from .asr import transcribe_job
 from .recording import LiveSession, materialize_recording
 from .codex import APPROVED_MODELS, capabilities,find_codex,validate_selection,translate_version
+from .settings_page import SettingsPage
 
 class LiveSignals(QObject):
     event=Signal(object)
@@ -90,18 +91,29 @@ class WorkspaceWindow(MainWindow):
         clear(self.context_layout); clear(self.content_layout)
         while self.header.count()>1:
             item=self.header.takeAt(1)
-            if item.widget(): item.widget().deleteLater()
+            if item.widget(): item.widget().hide(); item.widget().deleteLater()
         self.title.setText(dict((key,title) for key,_,title in PAGES)[page])
+        settings=page=='settings'
+        self.title.setStyleSheet('font-size:28px;font-weight:600' if settings else '')
+        self.subtitle.setText('Thiết lập công cụ cho việc học của bạn.' if settings else '')
+        self.subtitle.setStyleSheet('font-size:16px'); self.subtitle.setVisible(settings)
+        self.workspace_layout.setSpacing(24 if settings else 18)
         titles={'dashboard':'Bạn muốn học gì?','file':'Dịch từ âm thanh','live':'Phiên học trực tiếp',
             'library':'Tài liệu của bạn','prompts':'Ngữ cảnh học tập','settings':'Tùy chỉnh','trash':'Thùng rác'}
-        self.context_layout.addWidget(label(titles[page],'heading'))
-        self.context_layout.addWidget(label('Không gian học tập Trung – Việt','muted',True))
+        context_title=label(titles[page],'heading')
+        if settings: context_title.setStyleSheet('font-size:22px;font-weight:600')
+        self.context_layout.addWidget(context_title)
+        context_subtitle=label('Cá nhân hóa không gian học tập.' if settings else 'Không gian học tập Trung – Việt','muted',True)
+        if settings: context_subtitle.setStyleSheet('font-size:13px')
+        self.context_layout.addWidget(context_subtitle)
         self.context_layout.setSpacing(8)
         self.option_widgets=None
         getattr(self,'show_'+page)()
         self.context_layout.addStretch()
-        self.context_layout.addWidget(button('Codex CLI · '+self.codex_status.get('login_label','Kết nối'),lambda:self.navigate('settings')))
-        self.content_layout.addStretch()
+        if settings: self.context_layout.addWidget(self.settings_page.connection_footer())
+        else:
+            self.context_layout.addWidget(button('Codex CLI · '+self.codex_status.get('login_label','Kết nối'),lambda:self.navigate('settings')))
+            self.content_layout.addStretch()
         self.scroll.verticalScrollBar().setValue(0)
 
     def capture_options(self):
@@ -191,12 +203,12 @@ class WorkspaceWindow(MainWindow):
 
     def options(self):
         context=QPlainTextEdit(self.store.setting('context','')); context.setFixedHeight(58); context.setAcceptDrops(False)
-        glossary=QComboBox(); glossary.addItem('Không áp dụng',None)
+        glossary=ComboBox(); glossary.addItem('Không áp dụng',None)
         for row in self.store.rows('SELECT * FROM glossaries ORDER BY name'):
             glossary.addItem(row['name'],row['id'])
         index=glossary.findData(self.store.setting('glossary_id')); glossary.setCurrentIndex(max(0,index))
-        model=QComboBox(); model.setObjectName('model_select')
-        effort=QComboBox(); effort.setObjectName('effort_select')
+        model=ComboBox(); model.setObjectName('model_select')
+        effort=ComboBox(); effort.setObjectName('effort_select')
         available=self.models
         if available:
             for item in available:
@@ -232,8 +244,11 @@ class WorkspaceWindow(MainWindow):
         self.option_widgets=(context,glossary,model,effort)
 
     def show_file(self):
-        self.context_layout.addWidget(button('↑  Kéo thả hoặc chọn âm thanh',self.choose_audio))
-        source=QComboBox(); source.addItem('Chọn từ thư viện',None)
+        upload=tonal_button('Kéo thả hoặc chọn file','upload',self.colors,self.choose_audio)
+        upload.setObjectName('file_import')
+        upload.setToolTip('Chọn file âm thanh hoặc kéo thả file vào cửa sổ.')
+        self.context_layout.addWidget(upload)
+        source=ComboBox(); source.addItem('Chọn từ thư viện',None)
         for row in self.store.list_audio(): source.addItem(row['filename'],row['id'])
         source.setCurrentIndex(max(0,source.findData(self.audio_id)))
         source.activated.connect(lambda _:self.open_audio(source.currentData()) if source.currentData() else None)
@@ -248,7 +263,7 @@ class WorkspaceWindow(MainWindow):
         panel,body=card(audio['title'] if audio else 'Chọn âm thanh để bắt đầu')
         if audio:
             body.addWidget(label(f"{audio['filename']} · {timestamp(audio['duration'])} · 1 âm thanh gốc",'muted',True))
-            versions=QComboBox(); versions.addItem('Bản chép lời',None)
+            versions=ComboBox(); versions.addItem('Bản chép lời',None)
             for v in self.store.versions(self.audio_id): versions.addItem(f"v{v['number']} · {v['model']} · {state_name(v['status'])}",v['id'])
             versions.setCurrentIndex(max(0,versions.findData(self.version_id)))
             versions.activated.connect(lambda _:self.open_audio(self.audio_id,versions.currentData()))
@@ -274,7 +289,7 @@ class WorkspaceWindow(MainWindow):
         self.play_label=label('00:00','muted'); player_row.addWidget(self.play_label)
         self.seek_slider=QSlider(Qt.Orientation.Horizontal); self.seek_slider.setRange(0,max(1,int((audio or {}).get('duration',0)*1000)))
         self.seek_slider.sliderMoved.connect(self.player.setPosition); player_row.addWidget(self.seek_slider,1)
-        speed=QComboBox(); speed.addItems(['0.75×','1×','1.25×','1.5×']); speed.setCurrentIndex(1)
+        speed=ComboBox(); speed.addItems(['0.75×','1×','1.25×','1.5×']); speed.setCurrentIndex(1)
         speed.currentIndexChanged.connect(lambda i:self.player.setPlaybackRate([.75,1,1.25,1.5][i])); player_row.addWidget(speed)
         body.addLayout(player_row); self.content_layout.addWidget(panel)
         self.fill_timeline()
@@ -515,89 +530,20 @@ class WorkspaceWindow(MainWindow):
         except Exception as error: self.error(error); return False
 
     def show_settings(self):
-        self.context_layout.addWidget(label('Công cụ dịch, mô hình và giao diện','muted',True))
-        panel,body=card('Kết nối Codex CLI')
-        body.addWidget(label(self.codex_status.get('version','Chưa kiểm tra')+' · '+self.codex_status.get('login_label','Chưa xác định đăng nhập'),'heading',True))
-        path=QLineEdit(self.store.setting('codex_path',self.codex_status.get('path','')))
-        path.setReadOnly(True); self.field(body,'Đường dẫn codex.exe',path)
-        actions=QHBoxLayout(); actions.addWidget(button('Chọn codex.exe',self.choose_codex)); actions.addWidget(button('Kiểm tra kết nối',self.check_codex)); actions.addWidget(button('Đăng nhập',self.login_codex,True)); body.addLayout(actions)
-        body.addWidget(label('1. Cài Codex CLI.\n2. Mở Terminal và chạy: codex login\n3. Hoàn tất đăng nhập trong trình duyệt.\n4. Chạy codex login status hoặc chọn Kiểm tra kết nối.','muted',True))
-        body.addWidget(button('Sao chép hướng dẫn',lambda:QApplication.clipboard().setText('codex login\ncodex login status')))
-        body.addWidget(button('Tài liệu Codex chính thức',lambda:QDesktopServices.openUrl(QUrl('https://learn.chatgpt.com/docs/developer-commands?surface=cli'))))
-        self.content_layout.addWidget(panel)
-        quota,quota_body=card('Hạn mức sử dụng · Số liệu trực tiếp từ Codex')
-        limits=self.codex_status.get('limits',{})
-        limit=limits.get('rateLimits',{})
-        windows=[limit.get('primary'),limit.get('secondary')]
-        if not any(windows): quota_body.addWidget(label('Chưa thể đọc hạn mức trong kết nối hiện tại. Không tự ước tính.','muted',True))
-        from datetime import datetime,timezone,timedelta
-        for item in windows:
-            if not item: continue
-            minutes=item.get('windowDurationMins')
-            name='5 giờ' if minutes==300 else '1 tuần' if minutes==10080 else f'{minutes} phút'
-            reset=datetime.fromtimestamp(item['resetsAt'],timezone(timedelta(hours=7))).strftime('%d/%m %H:%M UTC+7') if item.get('resetsAt') else 'Chưa có dữ liệu reset'
-            quota_body.addWidget(label(f"Cửa sổ {name}: đã dùng {item['usedPercent']}% · Reset: {reset}",wrap=True))
-        self.content_layout.addWidget(quota)
-        panel,body=card('Mô hình, mức suy luận & giao diện')
-        available=QListWidget(); available.setMaximumHeight(250)
-        def normalized(text): return ''.join(c for c in text.lower() if c.isalnum())
-        models_by_name={normalized(x['displayName']):x for x in self.models}
-        for name in APPROVED_MODELS:
-            item=models_by_name.get(normalized(name)); available.addItem(name+(' · Khả dụng' if item else ' · Chưa xác minh / không khả dụng'))
-        body.addWidget(available)
-        body.addWidget(label('Danh sách và mức suy luận được đọc từ model/list. Không tự đổi model khi lựa chọn không được hỗ trợ.','muted',True))
-        model_choice=QComboBox(); effort_choice=QComboBox()
-        for item in self.models: model_choice.addItem(item['displayName'],item['model'])
-        previous_model=self.store.setting('model'); selected=model_choice.findData(previous_model)
-        if previous_model and selected<0:
-            model_choice.addItem(previous_model+' · Không khả dụng',previous_model); selected=model_choice.count()-1; model_choice.model().item(selected).setEnabled(False)
-        model_choice.setCurrentIndex(max(0,selected))
-        def supported_efforts():
-            effort_choice.clear(); item=next((x for x in self.models if x['model']==model_choice.currentData()),None)
-            if item:
-                for value in item['supportedReasoningEfforts']: effort_choice.addItem(value['reasoningEffort'],value['reasoningEffort'])
-                chosen=self.store.setting('effort',item['defaultReasoningEffort']) if model_choice.currentData()==previous_model else item['defaultReasoningEffort']
-                index=effort_choice.findData(chosen)
-                if chosen and index<0:
-                    effort_choice.addItem(chosen+' · Không khả dụng',chosen); index=effort_choice.count()-1
-                    effort_choice.model().item(index).setEnabled(False)
-                effort_choice.setCurrentIndex(max(0,index))
-            else: effort_choice.addItem('Chưa xác minh',None)
-        model_choice.currentIndexChanged.connect(supported_efforts); supported_efforts()
-        self.field(body,'Mô hình mặc định',model_choice); self.field(body,'Mức suy luận mặc định',effort_choice)
-        def save_default():
-            try:
-                validate_selection(self.models,model_choice.currentData(),effort_choice.currentData())
-                self.store.set_setting('model',model_choice.currentData()); self.store.set_setting('effort',effort_choice.currentData())
-                self.statusBar().showMessage('Đã lưu mô hình và mức suy luận mặc định.')
-            except Exception as error: self.error(error)
-        body.addWidget(button('Lưu mặc định',save_default,True))
-        theme=QComboBox(); theme.addItems(['Sáng','Tối']); theme.setCurrentIndex(1 if self.colors['bg']==DARK['bg'] else 0); theme.currentIndexChanged.connect(self.change_theme)
-        self.field(body,'Giao diện',theme)
-        self.add_asr_settings(body)
-        body.addWidget(button('Sao lưu cơ sở dữ liệu',self.backup))
-        body.addWidget(button('Mở thư mục dữ liệu',lambda:QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.store.root)))))
-        self.content_layout.addWidget(panel)
+        refresh=tonal_button('Kiểm tra kết nối','refresh',self.colors,self.check_codex)
+        refresh.setObjectName('settings_check_connection'); refresh.setFixedWidth(180)
+        self.header.addWidget(refresh)
+        self.settings_page=SettingsPage(self); self.settings_page.add_navigation(self.context_layout)
+        self.content_layout.addWidget(self.settings_page,1)
 
     def backup(self):
         try: self.statusBar().showMessage('Đã sao lưu: '+str(self.store.backup()))
         except Exception as error: self.error(error)
 
     def change_theme(self,index):
+        position=self.scroll.verticalScrollBar().value() if self.page=='settings' else None
         self.store.set_setting('theme','dark' if index else 'light'); super().change_theme(index)
-
-    def add_asr_settings(self,body):
-        body.addWidget(label('Nhận dạng giọng nói cục bộ','heading'))
-        body.addWidget(label('Thư mục mô hình: '+str(self.model_manager.root),'muted',True))
-        for key in ('sensevoice','paraformer','vad'):
-            body.addWidget(button(CATALOG[key]['name']+(' · Đã có' if self.model_manager.ready(key) else ' · Tải mô hình'),lambda checked=False,k=key:self.install_model(k)))
-        body.addWidget(button('Chọn thư mục mô hình',self.choose_model_dir))
-        threads=QSpinBox(); threads.setRange(1,4); threads.setValue(self.store.setting('asr_threads',4))
-        threads.valueChanged.connect(lambda value:self.store.set_setting('asr_threads',value)); self.field(body,'Luồng CPU ASR (1–4)',threads)
-        if self.recovered:
-            body.addWidget(label('Tác vụ bị gián đoạn','heading'))
-            for row in self.recovered:
-                body.addWidget(button(row['kind']+' · Phục hồi',lambda checked=False,j=row:self.recover_job(j)))
+        if position is not None: QTimer.singleShot(0,lambda:self.scroll.verticalScrollBar().setValue(position) if self.page=='settings' else None)
 
     def choose_model_dir(self):
         path=QFileDialog.getExistingDirectory(self,'Thư mục chứa sensevoice / paraformer / vad',str(self.model_manager.root))
@@ -627,7 +573,7 @@ class WorkspaceWindow(MainWindow):
 
     def show_live(self):
         import sounddevice as sd
-        self.mic_select=QComboBox()
+        self.mic_select=ComboBox()
         for i,device in enumerate(sd.query_devices()):
             if device['max_input_channels']>0: self.mic_select.addItem(device['name'],i)
         chosen=self.mic_select.findData(self.store.setting('mic_device')); self.mic_select.setCurrentIndex(max(0,chosen))

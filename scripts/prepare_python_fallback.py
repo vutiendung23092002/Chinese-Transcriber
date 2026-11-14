@@ -23,7 +23,7 @@ for name in packages:
         source=Path(package.locate_file(entry)); destination=output/'_internal'/str(entry)
         if source.is_file(): destination.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,destination)
 shutil.copytree(root/'src/chinese_transcriber',output/'src/chinese_transcriber',dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
-for folder in ('fonts','logo-concepts'):
+for folder in ('fonts','logo-concepts','icons'):
     shutil.copytree(root/'assets'/folder,output/'assets'/folder,dirs_exist_ok=True)
 (output/'launch.py').write_text('''import os
 from pathlib import Path
