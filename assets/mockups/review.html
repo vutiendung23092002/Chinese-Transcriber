@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi" data-palette="pastel" data-mode="light">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chinese Transcriber · Thiết kế V2</title>
+    <link rel="stylesheet" href="review.css?v=2.3">
+    <link rel="stylesheet" href="sidebar-refinement.css?v=2.3">
+</head>
+
+<body>
+    <div class="reviewbar">
+        <div><span class="reviewdot"></span><strong>THIẾT KẾ V2</strong><span class="review-copy">Giai đoạn 1 · Dữ liệu
+                minh họa · Chờ duyệt</span></div>
+        <div class="review-controls"><a href="?screen=brand" id="brand-link">Màu sắc & logo</a><label
+                class="palette-control">Hướng <select id="palette" aria-label="Hướng thiết kế">
+                    <option value="pastel">Pastel & Graphite</option>
+                </select></label><label>Giao diện <select id="mode" aria-label="Chế độ giao diện">
+                    <option value="light">Sáng</option>
+                    <option value="dark">Tối</option>
+                </select></label></div>
+    </div>
+    <div class="app" id="app">
+        <div class="windowbar"><span id="window-logo"></span><span>Chinese Transcriber</span><span
+                class="window-caption">Không gian học tập Trung – Việt</span>
+            <div class="window-actions" aria-hidden="true"><span>—</span><span>□</span><span>×</span></div>
+        </div>
+        <div class="app-body">
+            <aside id="sidebar"></aside>
+            <section id="context-panel" aria-label="Thao tác của trang"></section>
+            <main id="main"></main>
+        </div>
+    </div>
+    <dialog id="modal" aria-labelledby="modal-title"></dialog>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="review.js?v=2.3"></script>
+</body>
+
+</html>

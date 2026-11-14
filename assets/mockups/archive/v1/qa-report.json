@@ -1,0 +1,682 @@
+{
+  "screenshots": [
+    "a-light-01-dashboard.png",
+    "a-light-02-file.png",
+    "a-light-03-live.png",
+    "a-light-04-library.png",
+    "a-light-05-prompts.png",
+    "a-light-06-settings.png",
+    "a-light-07-trash.png",
+    "b-dark-01-dashboard.png",
+    "b-dark-02-file.png",
+    "b-dark-03-live.png",
+    "b-dark-04-library.png",
+    "b-dark-05-prompts.png",
+    "b-dark-06-settings.png",
+    "b-dark-07-trash.png",
+    "a-dark-dashboard.png",
+    "b-light-dashboard.png",
+    "00-brand-board.png",
+    "dialog-purge-version.png",
+    "dialog-purge-audio.png",
+    "dialog-last-version.png"
+  ],
+  "errors": [],
+  "geometry": [
+    {
+      "name": "a-light-01-dashboard",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "a-light-02-file",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 902
+      }
+    },
+    {
+      "name": "a-light-03-live",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "a-light-04-library",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "a-light-05-prompts",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "a-light-06-settings",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "a-light-07-trash",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-dark-01-dashboard",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-dark-02-file",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 902
+      }
+    },
+    {
+      "name": "b-dark-03-live",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-dark-04-library",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-dark-05-prompts",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-dark-06-settings",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-dark-07-trash",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "a-dark-dashboard",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "b-light-dashboard",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "00-brand-board",
+      "width": 1600,
+      "body": 1600,
+      "main": null
+    },
+    {
+      "name": "dialog-purge-version",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "dialog-purge-audio",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "dialog-last-version",
+      "width": 1600,
+      "body": 1600,
+      "main": {
+        "height": 900,
+        "scroll": 900
+      }
+    },
+    {
+      "name": "layout-1366-dashboard",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1366-file",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1366-live",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1366-library",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1366-prompts",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1366-settings",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1366-trash",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-dashboard",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-file",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-live",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-library",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-prompts",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-settings",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-1024-trash",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-dashboard",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-file",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-live",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-library",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-prompts",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-settings",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-768-trash",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-dashboard",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-file",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-live",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-library",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-prompts",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-settings",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    },
+    {
+      "name": "layout-390-trash",
+      "bodyOverflow": 0,
+      "mainOverflow": 0
+    }
+  ],
+  "contrasts": [
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "text/panel",
+      "ratio": 14.67,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "muted/panel",
+      "ratio": 6.27,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "muted/bg",
+      "ratio": 5.73,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "muted/tint",
+      "ratio": 5.42,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "primary/tint",
+      "ratio": 4.72,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "primary/panel",
+      "ratio": 5.47,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "on-primary/primary",
+      "ratio": 5.47,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "danger/danger-bg",
+      "ratio": 5.38,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "warn/warn-bg",
+      "ratio": 5.73,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "success/success-bg",
+      "ratio": 6.28,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "info/info-bg",
+      "ratio": 5.54,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "light",
+      "pair": "interim/panel",
+      "ratio": 4.96,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "text/panel",
+      "ratio": 13.63,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "muted/panel",
+      "ratio": 7.97,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "muted/bg",
+      "ratio": 9.05,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "muted/tint",
+      "ratio": 6.01,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "primary/tint",
+      "ratio": 6.57,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "primary/panel",
+      "ratio": 8.71,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "on-primary/primary",
+      "ratio": 8.7,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "danger/danger-bg",
+      "ratio": 7.39,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "warn/warn-bg",
+      "ratio": 7.82,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "success/success-bg",
+      "ratio": 6.78,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "info/info-bg",
+      "ratio": 7.05,
+      "pass": true
+    },
+    {
+      "palette": "jade",
+      "mode": "dark",
+      "pair": "interim/panel",
+      "ratio": 7.97,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "text/panel",
+      "ratio": 14.87,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "muted/panel",
+      "ratio": 6.47,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "muted/bg",
+      "ratio": 5.88,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "muted/tint",
+      "ratio": 5.39,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "primary/tint",
+      "ratio": 5.11,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "primary/panel",
+      "ratio": 6.14,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "on-primary/primary",
+      "ratio": 6.14,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "danger/danger-bg",
+      "ratio": 5.38,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "warn/warn-bg",
+      "ratio": 5.73,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "success/success-bg",
+      "ratio": 6.28,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "info/info-bg",
+      "ratio": 5.54,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "light",
+      "pair": "interim/panel",
+      "ratio": 4.96,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "text/panel",
+      "ratio": 13.98,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "muted/panel",
+      "ratio": 8.51,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "muted/bg",
+      "ratio": 9.51,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "muted/tint",
+      "ratio": 7.22,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "primary/tint",
+      "ratio": 6.13,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "primary/panel",
+      "ratio": 7.22,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "on-primary/primary",
+      "ratio": 7.54,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "danger/danger-bg",
+      "ratio": 7.39,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "warn/warn-bg",
+      "ratio": 7.82,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "success/success-bg",
+      "ratio": 6.78,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "info/info-bg",
+      "ratio": 7.05,
+      "pass": true
+    },
+    {
+      "palette": "iris",
+      "mode": "dark",
+      "pair": "interim/panel",
+      "ratio": 8.51,
+      "pass": true
+    }
+  ]
+}

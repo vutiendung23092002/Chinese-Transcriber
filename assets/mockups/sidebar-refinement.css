@@ -1,0 +1,59 @@
+/* Phase 1 detail revision: inset selection pocket, no menu control. */
+aside#sidebar{gap:12px;padding-top:13px}
+.rail-brand,.rail-brand svg{width:40px;height:40px}
+.nav{width:50px;max-height:none;min-height:490px;padding:34px 0 12px;gap:7px;background:transparent;isolation:isolate}
+.rail-surface{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0;fill:var(--rail)}
+.nav button{width:36px;height:36px;min-height:36px;padding:0;border-radius:0;background:transparent;z-index:1}
+.nav button .icon{width:16px;height:16px;stroke-width:1.5}
+.nav button:hover{background:transparent;color:#FFFFFF}
+.nav button.active{width:36px;height:36px;min-height:36px;background:transparent;box-shadow:none;transform:translateX(8px);color:#453944}
+.nav button.active:before{display:none}
+.nav button.active:after{content:"";position:absolute;left:4px;top:4px;width:28px;height:28px;border-radius:50%;background:var(--rail-active);z-index:1}
+.nav button.active>.icon{z-index:2}
+.nav button.active:hover{background:transparent;color:#453944}
+.rail-divider{display:none}
+.rail-spacer{min-height:12px}
+.nav .rail-avatar{width:24px;height:24px;min-height:24px;border-radius:50%;font-size:9px;background:#F4C4CF;color:#473646}
+.nav .rail-login{width:34px;height:34px;min-height:34px;margin-top:3px}
+.nav .rail-login .icon{width:16px;height:16px}
+.nav-tooltip{left:54px}
+/* One shared desktop shell: switching pages never changes these columns. */
+:root{--shell-rail-width:82px;--shell-context-width:260px}
+.app .app-body,
+.app:has(.work-layout) .app-body,
+.app:has(.settings-layout) .app-body{
+ grid-template-columns:var(--shell-rail-width) var(--shell-context-width) minmax(0,1fr);
+}
+#context-panel{overflow:visible;padding:22px 18px 16px 17px;gap:16px}
+.context-subtitle{margin-top:6px}
+.context-foot{padding-top:11px;flex-shrink:0}
+.context-codex{display:flex;align-items:center;gap:9px;border:0;padding:0;width:100%;text-align:left;background:transparent;color:var(--muted);min-height:35px}
+.context-codex>.icon{width:16px;height:16px;flex-shrink:0}
+.context-codex strong{display:block;font-size:11px;line-height:1.5;color:var(--text)}
+.context-codex .grow>span{display:block;font-size:9px;line-height:1.6;margin-top:2px}
+#context-panel .config-panel{gap:9px}
+#context-panel .config-panel .dropzone{padding:10px 8px;gap:6px}
+#context-panel .config-panel .dropzone .large-icon{width:22px;height:22px}
+#context-panel .config-panel .or-divider{margin:7px 0}
+#context-panel .config-panel .help-line{margin-top:6px;line-height:1.5}
+.context-config .stack{gap:11px}
+.context-config .field textarea{min-height:72px;height:72px}
+.context-tip{padding:13px;font-size:10px;line-height:1.7}
+#context-panel .legend-row{padding:6px 0;font-size:10px}
+@media(max-width:1400px){:root{--shell-rail-width:74px}}
+@media(max-width:1150px){
+ :root{--shell-rail-width:72px}
+ .app .app-body,.app:has(.work-layout) .app-body,.app:has(.settings-layout) .app-body{grid-template-columns:var(--shell-rail-width) minmax(0,1fr)}
+}
+@media(max-width:800px){
+ :root{--shell-rail-width:63px}
+ aside#sidebar{gap:12px}
+ .rail-brand,.rail-brand svg{width:34px;height:34px}
+ .nav{width:44px;max-height:620px;min-height:490px;padding:34px 0 12px;gap:7px}
+ .nav button,.nav button.active{width:36px;height:36px;min-height:36px}
+ .nav button.active{transform:translateX(8px);box-shadow:none}
+ .nav button.active:after{left:4px;top:4px;width:28px;height:28px}
+ .nav button .icon{width:15px;height:15px}
+ .nav .rail-avatar{width:24px;height:24px;min-height:24px}
+ .nav .rail-login{height:34px;min-height:34px}
+}
