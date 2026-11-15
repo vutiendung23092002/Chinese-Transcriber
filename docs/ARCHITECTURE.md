@@ -9,14 +9,16 @@
 - storage.py: SQLite, transaction, SHA-256, quan hệ nguồn/transcript/phiên bản, job và backup.
 - audio.py: FFmpeg CPU, giải mã theo luồng mono 16 kHz, timestamp và xuất TXT nguyên tử.
 - models.py / asr.py: tải/kiểm tra model, Silero VAD, SenseVoiceSmall và Streaming Paraformer.
+- pipeline.py: điều phối chép lời file và dịch song song; hàng đợi bền trong SQLite, dừng/tiếp tục cùng transcript và version.
 - recording.py: journal PCM, hàng đợi ghi riêng, ASR riêng, dịch riêng và phục hồi sau sự cố.
+- microphone.py: nhận diện mic theo tên/trình điều khiển, tìm lại index trước khi mở và đo PCM gốc/cảnh báo tín hiệu; không lọc, khuếch đại hay sửa mẫu.
 - codex.py: stdio JSON-RPC chính thức, xác minh model/effort, structured output, kiểm tra ID, retry và dừng.
 
 ## Luồng dữ liệu
 
 Import → kiểm tra âm thanh → copy/hash tạm → đổi tên nguyên tử → transaction audio.
 
-File ASR → FFmpeg đọc từng khối → Silero VAD xác định ranh giới mẫu → SenseVoice INT8 → lưu từng segment ngay → hoàn tất transcript.
+File ASR → FFmpeg đọc từng khối → Silero VAD xác định ranh giới mẫu → SenseVoice INT8 → transaction lưu segment và bản ghi hàng đợi dịch. Một thread riêng lấy các đoạn sẵn có để gửi Codex, tối đa 6 đoạn/lượt; producer ASR không chờ mạng. Chưa kết nối Codex vẫn dùng luồng chép lời cục bộ cũ.
 
 Live → microphone PCM 16 kHz → hàng đợi ghi → journal flush/fsync định kỳ. Một nhánh đưa sang Paraformer cho interim và VAD/SenseVoice cho final; chỉ final được đưa sang hàng đợi Codex. Nếu ASR chậm/hỏng, ghi âm vẫn tiếp tục; cần chạy lại chép lời từ nguồn đã lưu để có đầy đủ kết quả.
 
@@ -25,6 +27,8 @@ Codex → kiểm tra quyền model/effort → dịch batch 6 đoạn (live: từ
 ## Tính nhất quán
 
 SQLite bật foreign_keys, WAL và synchronous=FULL. Transaction ghi dùng BEGIN IMMEDIATE và lock nội bộ; một process giữ QLockFile cho mỗi thư viện. Kết quả đã hoàn tất được ghi trước khi job báo complete. Việc hủy giữ nguyên những phần đã lưu.
+
+Tác vụ ghép dùng một job `transcribe_translate`, giữ snapshot model/effort/context/glossary trong version. Đoạn Trung và mục chờ dịch được ghi cùng transaction; khôi phục bổ sung mục chờ bị thiếu mà không ghi đè kết quả. Consumer đọc cờ producer hoàn tất trước khi chụp hàng đợi để không bỏ sót đoạn cuối trong race kết thúc. Lỗi dịch không hủy ASR. Coordinator chỉ kết thúc sau khi consumer dừng; UI không join thread. Khi tiếp tục ASR, VAD được chạy lại từ nguồn để giữ ranh giới và bỏ qua nhận dạng các đoạn đến mốc cuối đã lưu. Timer UI gộp cập nhật bảng tối đa khoảng 10 lần/giây.
 
 Nguồn dùng tên SHA-256; nhiều transcript và version trỏ về một audio. Tệp import được fsync trước os.replace. Lỗi commit sau rename có thể để lại file mồ côi; không tạo record đang hoạt động trỏ tới file đã xóa. Không tự xóa file mồ côi.
 

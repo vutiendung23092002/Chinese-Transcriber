@@ -9,6 +9,7 @@
 - Streaming Paraformer: xem nguồn model https://huggingface.co/csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en và ModelScope liên kết từ tài liệu sherpa-onnx.
 - Silero VAD: MIT, https://github.com/snakers4/silero-vad
 - Noto Sans / Noto Sans SC: SIL Open Font License 1.1. Các bản OFL nằm trong assets/fonts và bản đóng gói.
+- Inter (Regular/Italic variable): SIL Open Font License 1.1, nguồn https://github.com/google/fonts/tree/main/ofl/inter. Font và OFL-Inter.txt đi kèm trong assets/fonts để giữ cùng kiểu chữ trên mọi máy.
 - NumPy, SoundFile, sounddevice, imageio-ffmpeg, jsonschema, platformdirs và psutil: xem metadata/license trong các gói tương ứng.
 - FFmpeg executable được cung cấp qua imageio-ffmpeg. Xem build/license chính xác tại https://github.com/imageio/imageio-ffmpeg và thông tin -version của executable kèm gói; không phải mã riêng của ứng dụng.
 

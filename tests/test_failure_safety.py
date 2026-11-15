@@ -15,10 +15,11 @@ def test_parallel_imports_never_duplicate_source(tmp_path):
     assert len(store.list_audio())==1
     assert len(list((store.root/'audio').iterdir()))==1
 
-def test_restore_group_does_not_restore_previously_trashed_version(tmp_path):
+def test_restore_group_does_not_restore_previously_trashed_version(tmp_path,monkeypatch):
     store=Store(tmp_path/'data'); path=tmp_path/'a.wav'; path.write_bytes(b'a')
     audio,_=store.import_audio(path); t=store.new_transcript(audio['id'],'test'); store.append_segment(t,0,1,'中')
     a=store.new_version(audio['id'],t,'m','low','',[]); b=store.new_version(audio['id'],t,'m','low','',[])
+    monkeypatch.setattr('chinese_transcriber.storage.now',lambda:'2026-11-14T12:00:00.000000+00:00')
     store.trash_version(a); store.trash_audio(audio['id']); store.restore_audio(audio['id'])
     assert [x['id'] for x in store.versions(audio['id'])]==[b]
 

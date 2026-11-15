@@ -27,6 +27,7 @@ PATHS = {
  "play":'<path d="m8 4 12 8-12 8z"/>',
  "terminal":'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m6 9 4 3-4 3m7 0h5"/>',
  "audio":'<path d="M4 10v4m4-8v12m4-15v18m4-15v12m4-8v4"/>',
+ "translate":'<path d="M3 5h12M9 2v3m3 0c-1 5-4 8-9 11m2-8 7 7m2 6 4-10 4 10m-6-4h4"/>',
  "download":'<path d="M12 3v13m-5-5 5 5 5-5M4 16v5h16v-5"/>',
  "refresh":'<path d="M20 10a8 8 0 0 0-14-5L3 8m0-5v5h5M4 14a8 8 0 0 0 14 5l3-3m0 5v-5h-5"/>',
  "plus":'<path d="M12 5v14M5 12h14"/>',
@@ -34,6 +35,7 @@ PATHS = {
  "stop":'<rect x="5" y="5" width="14" height="14" rx="1"/>',
  "clock":'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
  "cube":'<path d="m12 2 9 5v10l-9 5-9-5V7zM3 7l9 5 9-5M12 12v10M7.5 4.5l9 5"/>',
+ "cpu":'<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4"/><rect x="9" y="9" width="6" height="6"/>',
  "monitor":'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4m-5 0h10"/>',
  "database":'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0"/>',
  "chart":'<path d="M5 20V10m7 10V4m7 16V8"/>',
@@ -41,6 +43,14 @@ PATHS = {
  "backup":'<path d="M7 18H5a4 4 0 0 1-1-8 8 8 0 0 1 15-1 5 5 0 0 1 0 10h-2M12 21V11m-4 4 4-4 4 4"/>',
  "info":'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/>',
  "check":'<path d="m5 12 4 4L19 6"/>',
+ "bolt":'<path d="m13 2-9 12h7l-1 8 10-13h-7z"/>',
+ "record":'<circle cx="12" cy="12" r="4" stroke-width="8"/>',
+ "search":'<circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 6 6"/>',
+ "versions":'<rect x="4" y="5" width="14" height="17" rx="2"/><path d="M8 5V2h11l3 3v13h-4M8 10h6M8 14h7M8 18h5"/>',
+ "audio-file":'<path d="M14 2H5v20h15V8zM14 2v6h6M8 13v4m3-7v10m3-8v6m3-4v2"/>',
+ "save":'<path d="M4 3h13l4 4v14H3V3zM7 3v7h10V3M7 21v-7h10v7"/>',
+ "volume":'<path d="M11 5 6 9H3v6h3l5 4zM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
+ "volume-off":'<path d="M11 5 6 9H3v6h3l5 4zM16 9l6 6m0-6-6 6"/>',
  "chevron":'<path d="m9 5 7 7-7 7"/>',
 }
 
@@ -49,10 +59,10 @@ def asset(name: str) -> Path:
     return root / "assets" / name
 
 def load_fonts(application):
-    for name in ('NotoSans.ttf','NotoSansSC.ttf'):
+    for name in ('Inter.ttf','Inter-Italic.ttf','NotoSans.ttf','NotoSansSC.ttf'):
         path=asset('fonts/'+name)
         if path.is_file(): QFontDatabase.addApplicationFont(str(path))
-    font=QFont('Segoe UI' if 'Segoe UI' in QFontDatabase.families() else 'Noto Sans',10)
+    font=QFont('Inter' if 'Inter' in QFontDatabase.families() else 'Noto Sans',10)
     font.setFamilies([font.family(),'Noto Sans','Noto Sans SC'])
     application.setFont(font)
 
@@ -87,9 +97,10 @@ def stylesheet(c: dict) -> str:
     arrow_down=asset(f'icons/chevron-down-{mode}.svg').as_posix()
     arrow_up=asset(f'icons/chevron-up-{mode}.svg').as_posix()
     return f'''
-    QWidget {{ font-family: "Segoe UI", "Noto Sans", "Noto Sans SC"; font-size: 12px; color: {c['text']}; }}
-    QMainWindow, QWidget#workspace {{ background: {c['bg']}; }}
-    QWidget#context, QWidget#rail {{ background: {c['panel']}; }}
+    QWidget {{ font-family: "Inter", "Noto Sans", "Noto Sans SC"; font-size: 12px; color: {c['text']}; }}
+    QMainWindow, QWidget#workspace, QWidget#context {{ background: {c['bg']}; }}
+    QWidget#rail {{ background: {c['panel']}; }}
+    QFrame#context_panel {{ background:{c['panel']}; border:1px solid {c['line']}; border-radius:26px; }}
     QFrame#card {{ background: {c['panel']}; border: 1px solid {c['line']}; border-radius: 18px; }}
     QLabel {{ background: transparent; border: none; }}
     QLabel[role="muted"] {{ color: {c['muted']}; font-size: 11px; }}

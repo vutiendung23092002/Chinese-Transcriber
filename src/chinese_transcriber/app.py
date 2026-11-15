@@ -4,11 +4,11 @@ import sys
 import logging
 from pathlib import Path
 from PySide6.QtCore import QTimer, QLockFile
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 from .workspace import WorkspaceWindow
 from .storage import Store
-from .theme import load_fonts
+from .theme import asset, load_fonts
 
 def main():
     parser=argparse.ArgumentParser(description='Chinese Transcriber')
@@ -23,7 +23,14 @@ def main():
     elif args.portable:
         base=Path(sys.executable).parent if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[2]
         os.environ['CHINESE_TRANSCRIBER_DATA']=str(base/'data')
+    if sys.platform=='win32':
+        # Keep source launches under the app's identity instead of pythonw.exe.
+        import ctypes
+        shell32=ctypes.OleDLL('shell32')
+        shell32.SetCurrentProcessExplicitAppUserModelID.argtypes=[ctypes.c_wchar_p]
+        shell32.SetCurrentProcessExplicitAppUserModelID('ChineseTranscriber.Desktop')
     app=QApplication(sys.argv[:1]); app.setApplicationName('Chinese Transcriber')
+    app.setWindowIcon(QIcon(str(asset('logo-concepts/03-v2-voice-rhythm.svg'))))
     app.setOrganizationName('ChineseTranscriber'); app.setFont(QFont('Segoe UI',10))
     load_fonts(app)
     if args.self_test_audio:

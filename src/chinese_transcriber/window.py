@@ -1,6 +1,7 @@
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
-    QScrollArea, QGridLayout, QApplication)
+    QScrollArea, QGridLayout, QApplication, QFrame, QGraphicsDropShadowEffect)
 from .theme import LIGHT, DARK, stylesheet, icon, asset
 from .widgets import PAGES, Rail, ComboBox, label, button, box, card, clear
 
@@ -24,19 +25,20 @@ class MainWindow(QMainWindow):
         self.rail.selected.connect(self.navigate)
         layout.addWidget(self.rail)
         self.context = QWidget(); self.context.setObjectName('context'); self.context.setFixedWidth(260)
-        self.context_layout = QVBoxLayout(self.context)
-        self.context_layout.setContentsMargins(17,22,18,16); self.context_layout.setSpacing(12)
+        self.context_container_layout=QVBoxLayout(self.context)
+        self.context_container_layout.setContentsMargins(6,24,6,18); self.context_container_layout.setSpacing(0)
+        self.context_panel=QFrame(); self.context_panel.setObjectName('context_panel')
+        self.context_panel.setFrameShape(QFrame.Shape.NoFrame)
+        self.context_container_layout.addWidget(self.context_panel,1)
+        self._context_shadow=QGraphicsDropShadowEffect(self.context_panel)
+        self._context_shadow.setBlurRadius(14); self._context_shadow.setOffset(0,1)
+        self.context_panel.setGraphicsEffect(self._context_shadow)
+        self.context_layout = QVBoxLayout(self.context_panel)
+        self.context_layout.setContentsMargins(12,20,12,12); self.context_layout.setSpacing(12)
         layout.addWidget(self.context)
         self.workspace = QWidget(); self.workspace.setObjectName('workspace')
         self.workspace_layout = QVBoxLayout(self.workspace)
         self.workspace_layout.setContentsMargins(26,24,26,20); self.workspace_layout.setSpacing(18)
-        self.header = QHBoxLayout()
-        self.heading_block=QWidget(); heading_layout=QVBoxLayout(self.heading_block)
-        heading_layout.setContentsMargins(0,0,0,0); heading_layout.setSpacing(5)
-        self.title = label('Không gian học tập','title'); heading_layout.addWidget(self.title)
-        self.subtitle=label('','muted'); self.subtitle.hide(); heading_layout.addWidget(self.subtitle)
-        self.header.addWidget(self.heading_block,1)
-        self.workspace_layout.addLayout(self.header)
         self.scroll = QScrollArea(); self.scroll.setWidgetResizable(True)
         self.content = QWidget(); self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(0,0,0,0); self.content_layout.setSpacing(16)
@@ -49,8 +51,8 @@ class MainWindow(QMainWindow):
     def navigate(self, page):
         self.page = page
         self.rail.set_page(page)
+        self.update_context_panel()
         clear(self.context_layout); clear(self.content_layout)
-        self.title.setText(dict((key,title) for key,_,title in PAGES)[page])
         self.context_layout.addWidget(label({'dashboard':'Bạn muốn học gì?','file':'Dịch từ âm thanh',
             'live':'Phiên học trực tiếp','library':'Tài liệu của bạn','prompts':'Ngữ cảnh học tập',
             'settings':'Tùy chỉnh','trash':'Thùng rác'}[page], 'heading'))
@@ -65,13 +67,17 @@ class MainWindow(QMainWindow):
             body.addWidget(choices)
             self.content_layout.addWidget(panel)
         else:
-            panel, body = card(self.title.text())
+            panel, body = card(dict((key,title) for key,_,title in PAGES)[page])
             body.addWidget(label('Chưa có dữ liệu. Nhập âm thanh hoặc tạo phiên ghi âm để bắt đầu.','muted',True))
             self.content_layout.addWidget(panel)
         self.context_layout.addStretch()
         self.context_layout.addWidget(button('Codex CLI · Hướng dẫn đăng nhập',lambda:self.navigate('settings')))
         self.content_layout.addStretch()
         self.scroll.verticalScrollBar().setValue(0)
+
+    def update_context_panel(self):
+        """Keep the shared panel shadow in sync with the active theme."""
+        self._context_shadow.setColor(QColor(0,0,0,45) if self.colors['bg']==DARK['bg'] else QColor(88,63,125,25))
 
     def dashboard(self):
         tasks = QGridLayout()

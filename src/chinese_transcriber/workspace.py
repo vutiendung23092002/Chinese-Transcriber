@@ -6,21 +6,30 @@ import threading
 from PySide6.QtCore import Qt, QThreadPool, QTimer, QUrl, QSize, QObject, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QGridLayout,
+from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,
     QPlainTextEdit,QLineEdit,QFileDialog,QMessageBox,QTableWidget,QTableWidgetItem,
     QHeaderView,QAbstractItemView,QListWidget,QListWidgetItem,QDialog,QDialogButtonBox,
-    QCheckBox,QInputDialog,QSlider,QProgressBar,QApplication,QToolButton,QSplitter)
+    QCheckBox,QInputDialog,QSlider,QProgressBar,QApplication,QSplitter,QPushButton,QSpacerItem,QSizePolicy)
 from .window import MainWindow
 from .widgets import PAGES,label,button,tonal_button,box,card,clear,ComboBox
-from .theme import LIGHT,DARK,stylesheet,icon,bubble_icon
+from .file_page import FilePage, FilenameComboBox, transcription_context_styles, audio_thumbnail
+from .live_page import LivePage
+from .library_page import LibraryPage, library_context_styles
+from .glossary_page import GlossaryPage, glossary_context_styles
+from .dashboard_page import DashboardPage, DashboardActions
+from .theme import LIGHT,DARK,stylesheet,icon
 from .storage import Store
-from .audio import audio_info,timestamp,export_txt
+from .audio import audio_info,timestamp,export_txt,waveform_peaks
 from .workers import Task
 from .models import ModelManager
 from .asr import transcribe_job
 from .recording import LiveSession, materialize_recording
-from .codex import APPROVED_MODELS, capabilities,find_codex,validate_selection,translate_version
+from .microphone import input_devices,selected_input,device_identity
+from .pipeline import transcribe_translate_job
+from .codex import capabilities,find_codex,validate_selection,translate_version
+from .model_selector import ModelReasoningSelector
 from .settings_page import SettingsPage
+from .multimedia import configure_multimedia_logging
 
 class LiveSignals(QObject):
     event=Signal(object)
@@ -37,19 +46,27 @@ class WorkspaceWindow(MainWindow):
         self.glossary_id=None; self.tasks=set(); self.cancel_event=threading.Event()
         self.glossary_clean=None
         self.models=[]; self.codex_status={}; self.is_busy=False; self.recording=None
+        self.waveforms={}; self.waveform_pending=set(); self.waveform_cancel=threading.Event()
         import sys
         bundled=Path(sys.executable).parent/'models' if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[2]/'models'
         self.model_manager=ModelManager(self.store.setting('model_dir',str(bundled if bundled.is_dir() else self.store.root/'models')))
         self.live_signals=LiveSignals(); self.live_signals.event.connect(self.live_event)
-        self.live_segments=[]; self.live_interim=''; self.record_timer=None
+        self.live_segments=[]; self.live_interim=''; self.live_level=0; self.live_follow=True
+        self.live_stopping=False; self.record_timer=None
         self.pool=QThreadPool(); self.pool.setMaxThreadCount(3)
         super().__init__()
         self.colors=dict(DARK if self.store.setting('theme','light')=='dark' else LIGHT)
         self.setStyleSheet(stylesheet(self.colors)); self.rail.apply_colors(self.colors)
+        configure_multimedia_logging()
         self.player=QMediaPlayer(self); self.audio_output=QAudioOutput(self)
         self.player.setAudioOutput(self.audio_output)
         self.player.positionChanged.connect(self.playback_position)
+        self.player.playbackStateChanged.connect(self.refresh_player)
+        self.player.durationChanged.connect(self.refresh_player)
         self.player.errorOccurred.connect(lambda *args:self.statusBar().showMessage(self.player.errorString()))
+        self.file_pipeline_progress=None
+        self.file_pipeline_timer=QTimer(self); self.file_pipeline_timer.setSingleShot(True)
+        self.file_pipeline_timer.setInterval(100); self.file_pipeline_timer.timeout.connect(self.render_file_pipeline_progress)
         self.activity=label('','muted'); self.statusBar().addPermanentWidget(self.activity)
         self.cancel_button=button('Dừng tác vụ',self.cancel_work)
         self.cancel_button.setStyleSheet('padding:2px 8px;min-height:14px;font-size:11px'); self.cancel_button.hide()
@@ -69,7 +86,10 @@ class WorkspaceWindow(MainWindow):
             self.error('Một tác vụ đang chạy. Bạn vẫn có thể xem thư viện; hãy chờ hoặc dừng tác vụ trước.'); return
         task=Task(func); self.tasks.add(task)
         if busy:
-            self.is_busy=True; self.cancel_button.show(); self.activity.setText('Đang xử lý…')
+            self.is_busy=True; self.cancel_button.setEnabled(True); self.cancel_button.show(); self.activity.setText('Đang xử lý…')
+            self.refresh_file_state()
+            self.refresh_live_state()
+            self.refresh_library_state()
         task.signals.error.connect(error_handler or self.error)
         if done: task.signals.result.connect(done)
         if progress: task.signals.progress.connect(progress)
@@ -79,6 +99,9 @@ class WorkspaceWindow(MainWindow):
             if busy:
                 self.cancel_button.hide()
                 if not self.recording: self.activity.setText('')
+                self.refresh_file_state()
+                self.refresh_live_state()
+                self.refresh_library_state()
         task.signals.finished.connect(finish)
         self.pool.start(task)
 
@@ -89,21 +112,26 @@ class WorkspaceWindow(MainWindow):
         self.capture_options()
         self.page=page; self.rail.set_page(page)
         clear(self.context_layout); clear(self.content_layout)
-        while self.header.count()>1:
-            item=self.header.takeAt(1)
-            if item.widget(): item.widget().hide(); item.widget().deleteLater()
-        self.title.setText(dict((key,title) for key,_,title in PAGES)[page])
+        self.context.setStyleSheet(transcription_context_styles(self.colors) if page in ('file','live') else '')
+        if page=='library': self.context.setStyleSheet(library_context_styles(self.colors))
+        if page=='prompts': self.context.setStyleSheet(glossary_context_styles(self.colors))
+        self.update_context_panel()
+        self.context_layout.setContentsMargins(12,20,12,12)
         settings=page=='settings'
-        self.title.setStyleSheet('font-size:28px;font-weight:600' if settings else '')
-        self.subtitle.setText('Thiết lập công cụ cho việc học của bạn.' if settings else '')
-        self.subtitle.setStyleSheet('font-size:16px'); self.subtitle.setVisible(settings)
-        self.workspace_layout.setSpacing(24 if settings else 18)
+        self.workspace_layout.setSpacing(0)
+        self.workspace_layout.setContentsMargins(26,24,26,18 if page in ('live','library','prompts') else 20)
         titles={'dashboard':'Bạn muốn học gì?','file':'Dịch từ âm thanh','live':'Phiên học trực tiếp',
             'library':'Tài liệu của bạn','prompts':'Ngữ cảnh học tập','settings':'Tùy chỉnh','trash':'Thùng rác'}
         context_title=label(titles[page],'heading')
+        if page=='dashboard': context_title.setStyleSheet('font-size:20px;font-weight:700')
+        if page in ('file','live'): context_title.setObjectName(page+'_context_title')
+        if page=='library': context_title.setObjectName('library_context_title')
+        if page=='prompts': context_title.setObjectName('prompts_context_title')
         if settings: context_title.setStyleSheet('font-size:22px;font-weight:600')
         self.context_layout.addWidget(context_title)
         context_subtitle=label('Cá nhân hóa không gian học tập.' if settings else 'Không gian học tập Trung – Việt','muted',True)
+        if page=='dashboard': context_subtitle.setStyleSheet(f"font-size:13px;color:{self.colors['muted']}")
+        if page in ('file','live'): context_subtitle.setObjectName(page+'_context_subtitle')
         if settings: context_subtitle.setStyleSheet('font-size:13px')
         self.context_layout.addWidget(context_subtitle)
         self.context_layout.setSpacing(8)
@@ -112,19 +140,86 @@ class WorkspaceWindow(MainWindow):
         self.context_layout.addStretch()
         if settings: self.context_layout.addWidget(self.settings_page.connection_footer())
         else:
-            self.context_layout.addWidget(button('Codex CLI · '+self.codex_status.get('login_label','Kết nối'),lambda:self.navigate('settings')))
-            self.content_layout.addStretch()
+            footer=button('●  Codex đã kết nối' if self.codex_status.get('authenticated') else 'Codex CLI · '+self.codex_status.get('login_label','Kết nối'),lambda:self.navigate('settings'))
+            if page in ('file','live','library','prompts'): footer.setObjectName(page+'_connection')
+            elif self.codex_status.get('authenticated'):
+                footer.setStyleSheet(f"background:{self.colors['soft']};color:{self.colors['success']};border:0;text-align:left;padding:10px 12px")
+            self.context_layout.addWidget(footer)
+            if page not in ('file','live','library','prompts','dashboard'): self.content_layout.addStretch()
+        if page=='file': self.apply_file_density()
+        elif page=='live': self.apply_live_density()
+        elif page=='library': self.apply_library_density()
+        elif page=='prompts': self.apply_glossary_density()
+        elif page=='dashboard': self.apply_dashboard_density()
         self.scroll.verticalScrollBar().setValue(0)
+
+    def apply_dashboard_density(self):
+        compact=self.height()<820
+        self.context_layout.setContentsMargins(12,12 if compact else 20,12,10 if compact else 12)
+        self.context_layout.setSpacing(4 if compact else 8)
+        self.dashboard_header_gap.changeSize(0,0 if compact else 18,QSizePolicy.Policy.Minimum,QSizePolicy.Policy.Fixed)
+        self.context_layout.invalidate()
+        self.dashboard_actions.set_compact(compact)
+
+    def apply_options_density(self):
+        compact=self.height()<820
+        self.context.ensurePolished()
+        self.context_layout.setSpacing(4 if compact else 10)
+        self.context_layout.setContentsMargins(12,12 if compact else 20,12,10 if compact else 12)
+        if self.option_widgets:
+            context,glossary,selector=self.option_widgets
+            context.ensurePolished()
+            context.setFixedHeight(58 if compact else 76)
+            glossary.ensurePolished(); glossary.setFixedHeight(38 if compact else 40)
+        return compact
+
+    def apply_live_density(self):
+        compact=self.apply_options_density()
+        self.mic_select.ensurePolished(); self.mic_select.setFixedHeight(38 if compact else 40)
+        self.live_page.set_compact(compact)
+
+    def apply_file_density(self):
+        compact=self.apply_options_density()
+        for control in (self.file_import_button,self.file_source):
+            control.ensurePolished(); control.setFixedHeight(42 if compact else 48)
+        for control in (self.transcribe_button,self.translate_button):
+            control.ensurePolished(); control.setFixedHeight(40 if compact else 46)
+        self.file_page.set_compact(compact)
+
+    def apply_library_density(self):
+        compact=self.height()<820
+        self.context_layout.setContentsMargins(12,12 if compact else 20,12,10 if compact else 12)
+        self.context_layout.setSpacing(8 if compact else 10)
+        self.library_page.set_compact(compact)
+
+    def apply_glossary_density(self):
+        compact=self.height()<820
+        self.context_layout.setContentsMargins(12,12 if compact else 20,12,10 if compact else 12)
+        self.context_layout.setSpacing(8 if compact else 10)
+        if self.glossary_sets:
+            self.glossary_sets.setFixedHeight(min(self.glossary_sets.count()*48+4,max(96,self.height()-300)))
+        self.glossary_page.set_compact(compact)
+
+    def resizeEvent(self,event):
+        super().resizeEvent(event)
+        if self._ready and self.page=='file' and hasattr(self,'file_page'): self.apply_file_density()
+        if self._ready and self.page=='live' and hasattr(self,'live_page'): self.apply_live_density()
+        if self._ready and self.page=='library' and hasattr(self,'library_page'): self.apply_library_density()
+        if self._ready and self.page=='prompts' and hasattr(self,'glossary_page'): self.apply_glossary_density()
+        if self._ready and self.page=='dashboard' and hasattr(self,'dashboard_actions'):
+            self.apply_dashboard_density()
 
     def capture_options(self):
         widgets=getattr(self,'option_widgets',None)
         if widgets:
-            context,glossary,model,effort=widgets
+            context,glossary,selector=widgets
             try:
                 self.store.set_setting('context',context.toPlainText())
                 self.store.set_setting('glossary_id',glossary.currentData())
-                if model.currentData(): self.store.set_setting('model',model.currentData())
-                if effort.currentData(): self.store.set_setting('effort',effort.currentData())
+                self.store.set_setting('model',selector.model_id)
+                self.store.set_setting('effort',selector.effort)
+                if self.page=='live' and self.mic_select.currentData() is not None:
+                    self.store.set_setting('mic_device_identity',device_identity(self.mic_select.currentData()))
             except RuntimeError:
                 pass
 
@@ -132,38 +227,12 @@ class WorkspaceWindow(MainWindow):
         self.context_layout.addWidget(button(text,lambda:self.navigate(page)))
 
     def show_dashboard(self):
-        tasks=QGridLayout()
-        for i,(key,glyph,title) in enumerate([('file','file','Dịch file'),('live','mic','Ghi trực tiếp'),('library','library','Thư viện'),('prompts','book','Thuật ngữ'),('settings','settings','Cài đặt'),('trash','trash','Thùng rác')]):
-            tile=QToolButton(); tile.setText(title); tile.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-            tile.setIcon(bubble_icon(glyph,self.colors[['pink','lavender','cyan','yellow','soft','soft'][i]],self.colors['primary']))
-            tile.setIconSize(QSize(34,34)); tile.clicked.connect(lambda checked=False,p=key:self.navigate(p))
-            tile.setStyleSheet('QToolButton{min-height:74px;min-width:78px;border-radius:16px;padding:10px 4px;font-size:10px}')
-            tasks.addWidget(tile,i//2,i%2)
-        self.context_layout.addLayout(tasks)
-        self.content_layout.addWidget(label('Hôm nay, bạn muốn học gì?','heading'))
-        actions=QHBoxLayout()
-        for key,glyph,title,color in [('file','file','Dịch file ghi âm','pink'),('live','mic','Ghi âm trực tiếp','lavender'),('prompts','book','Chuẩn bị thuật ngữ','yellow')]:
-            tile=button('',lambda checked=False,p=key:self.navigate(p))
-            tile.setStyleSheet(f"QPushButton{{background:{self.colors[color]};border:0;border-radius:20px;min-height:145px;padding:0}}")
-            inner=QVBoxLayout(tile); inner.setContentsMargins(18,18,18,18); inner.setSpacing(9)
-            glyph_label=label(''); glyph_label.setPixmap(icon(glyph,self.colors['text'],26).pixmap(26,26)); inner.addWidget(glyph_label)
-            heading=label(title); heading.setStyleSheet('font-size:15px;font-weight:600'); inner.addWidget(heading)
-            subtitle=label({'file':'Từ âm thanh tiếng Trung đến bản dịch tiếng Việt.','live':'Theo dõi lời giảng qua từng câu đã chốt.','prompts':'Giữ đúng từ chuyên ngành trong mỗi bản dịch.'}[key],'muted',True)
-            inner.addWidget(subtitle); inner.addStretch()
-            for child in (glyph_label,heading,subtitle): child.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-            actions.addWidget(tile)
-        self.content_layout.addLayout(actions)
-        audio=self.store.list_audio()
-        versions=self.store.rows('SELECT v.* FROM versions v JOIN audio a ON a.id=v.audio_id WHERE v.deleted IS NULL AND a.deleted IS NULL ORDER BY v.created DESC')
-        stats=QHBoxLayout()
-        for title,value in [('File âm thanh',str(len(audio))),('Bản dịch đã lưu',str(len(versions))),('Lần dịch gần nhất',versions[0]['created'][11:16] if versions else '—'),('Mô hình mặc định',self.store.setting('model','Chưa chọn'))]:
-            panel,body=card(); body.addWidget(label(title,'muted')); body.addWidget(label(value,'heading' if title=='Mô hình mặc định' else 'value',True)); stats.addWidget(panel)
-        self.content_layout.addLayout(stats)
-        panel,body=card('Tiếp tục bài học')
-        if not audio: body.addWidget(label('Thư viện chưa có âm thanh. Tải file hoặc ghi âm để bắt đầu.','muted',True))
-        for row in audio[:4]:
-            body.addWidget(button(f"{row['title']} · {timestamp(row['duration'])} · {row['version_count']} bản dịch",lambda checked=False,a=row['id']:self.open_audio(a)))
-        self.content_layout.addWidget(panel)
+        self.dashboard_header_gap=QSpacerItem(0,18,QSizePolicy.Policy.Minimum,QSizePolicy.Policy.Fixed)
+        self.context_layout.addItem(self.dashboard_header_gap)
+        self.dashboard_actions=DashboardActions(self)
+        self.context_layout.addWidget(self.dashboard_actions)
+        self.dashboard_page=DashboardPage(self)
+        self.content_layout.addWidget(self.dashboard_page,1)
 
     def choose_audio(self):
         if self.is_busy or self.recording:
@@ -184,13 +253,13 @@ class WorkspaceWindow(MainWindow):
             self.statusBar().showMessage('Đã nhập âm thanh.' if created else 'File đã có trong thư viện. Đang dùng lại âm thanh gốc.')
         self.submit(work,done)
 
-    def open_audio(self,audio_id,version_id=None):
+    def open_audio(self,audio_id,version_id=None,*,transcript_only=False):
         self.audio_id=audio_id; self.version_id=version_id
         if version_id:
             row=self.store.one('SELECT * FROM versions WHERE id=?',(version_id,)); self.transcript_id=row['transcript_id']
         else:
             versions=self.store.versions(audio_id)
-            if versions:
+            if versions and not transcript_only:
                 self.version_id=versions[0]['id']; self.transcript_id=versions[0]['transcript_id']
             else:
                 transcript=self.store.latest_transcript(audio_id,True) or self.store.latest_transcript(audio_id,False)
@@ -203,96 +272,51 @@ class WorkspaceWindow(MainWindow):
 
     def options(self):
         context=QPlainTextEdit(self.store.setting('context','')); context.setFixedHeight(58); context.setAcceptDrops(False)
+        context.setPlaceholderText('Môn học, chủ đề, yêu cầu dịch…')
         glossary=ComboBox(); glossary.addItem('Không áp dụng',None)
         for row in self.store.rows('SELECT * FROM glossaries ORDER BY name'):
             glossary.addItem(row['name'],row['id'])
         index=glossary.findData(self.store.setting('glossary_id')); glossary.setCurrentIndex(max(0,index))
-        model=ComboBox(); model.setObjectName('model_select')
-        effort=ComboBox(); effort.setObjectName('effort_select')
-        available=self.models
-        if available:
-            for item in available:
-                model.addItem(item['displayName'],item['model'])
-            def normalized(text): return ''.join(c for c in text.lower() if c.isalnum())
-            returned={normalized(x['displayName']) for x in available}
-            for requested in APPROVED_MODELS:
-                if normalized(requested) not in returned:
-                    model.addItem(requested+' · Không khả dụng',None)
-                    model.model().item(model.count()-1).setEnabled(False)
-        else: model.addItem('Kiểm tra Codex để đọc model',None)
-        previous_model=self.store.setting('model'); index=model.findData(previous_model)
-        if previous_model and index<0:
-            model.addItem(previous_model+' · Không khả dụng',previous_model); index=model.count()-1; model.model().item(index).setEnabled(False)
-        model.setCurrentIndex(max(0,index))
-        def efforts():
-            effort.clear()
-            item=next((x for x in available if x['model']==model.currentData()),None)
-            if item:
-                for option in item.get('supportedReasoningEfforts',[]):
-                    value=option['reasoningEffort']; effort.addItem(value,value)
-                chosen=self.store.setting('effort',item.get('defaultReasoningEffort')) if model.currentData()==self.store.setting('model') else item.get('defaultReasoningEffort')
-                choice=effort.findData(chosen)
-                if chosen and choice<0:
-                    effort.addItem(chosen+' · Không khả dụng',chosen); choice=effort.count()-1; effort.model().item(choice).setEnabled(False)
-                effort.setCurrentIndex(max(0,choice))
-            else: effort.addItem('Chưa xác minh',None)
-        model.currentIndexChanged.connect(efforts); efforts()
+        self.model_selector=ModelReasoningSelector(self.models,self.store.setting('model'),self.store.setting('effort'),self.colors)
         self.field(self.context_layout,'Bối cảnh bài giảng',context)
         self.field(self.context_layout,'Bộ thuật ngữ',glossary)
-        self.field(self.context_layout,'Mô hình dịch',model)
-        self.field(self.context_layout,'Mức suy luận',effort)
-        self.option_widgets=(context,glossary,model,effort)
+        self.field(self.context_layout,'Mô hình & suy luận',self.model_selector)
+        self.option_widgets=(context,glossary,self.model_selector)
 
     def show_file(self):
-        upload=tonal_button('Kéo thả hoặc chọn file','upload',self.colors,self.choose_audio)
+        upload=button('Chọn file âm thanh',self.choose_audio)
+        upload.setIcon(icon('upload','#5F2BA6' if self.colors['bg']!=DARK['bg'] else self.colors['primary'],22))
+        upload.setIconSize(QSize(22,22))
         upload.setObjectName('file_import')
+        self.file_import_button=upload
         upload.setToolTip('Chọn file âm thanh hoặc kéo thả file vào cửa sổ.')
         self.context_layout.addWidget(upload)
-        source=ComboBox(); source.addItem('Chọn từ thư viện',None)
-        for row in self.store.list_audio(): source.addItem(row['filename'],row['id'])
+        source=FilenameComboBox(); source.setObjectName('file_source'); source.addItem('Chọn từ thư viện',None)
+        self.file_source=source
+        for row in self.store.list_audio():
+            source.addItem(audio_thumbnail(self.colors),row['filename'],row['id'])
+            source.setItemData(source.count()-1,row['filename'],Qt.ItemDataRole.ToolTipRole)
         source.setCurrentIndex(max(0,source.findData(self.audio_id)))
+        source.setIconSize(QSize(28,28))
         source.activated.connect(lambda _:self.open_audio(source.currentData()) if source.currentData() else None)
         self.context_layout.addWidget(source)
         self.options()
-        self.context_layout.addWidget(button('1. Chép lời tiếng Trung',self.transcribe))
-        self.context_layout.addWidget(button('2. Tạo bản dịch mới',self.translate,True))
-        if self.is_busy: self.context_layout.addWidget(button('Dừng tác vụ',self.cancel_work))
-        self.header.addWidget(button('Trung TXT',lambda:self.export('zh')))
-        self.header.addWidget(button('Việt TXT',lambda:self.export('vi')))
+        self.transcribe_button=button('Chép lời tiếng Trung',self.transcribe,True)
+        self.transcribe_button.setIcon(icon('audio',self.colors['on_primary'],22)); self.transcribe_button.setIconSize(QSize(22,22))
+        self.translate_button=button('Tạo bản dịch',self.translate)
+        self.translate_button.setIcon(icon('translate',self.colors['muted'],22)); self.translate_button.setIconSize(QSize(22,22))
+        self.context_layout.addWidget(self.transcribe_button)
+        self.context_layout.addWidget(self.translate_button)
         audio=self.store.one('SELECT * FROM audio WHERE id=?',(self.audio_id,)) if self.audio_id else None
-        panel,body=card(audio['title'] if audio else 'Chọn âm thanh để bắt đầu')
-        if audio:
-            body.addWidget(label(f"{audio['filename']} · {timestamp(audio['duration'])} · 1 âm thanh gốc",'muted',True))
-            versions=ComboBox(); versions.addItem('Bản chép lời',None)
-            for v in self.store.versions(self.audio_id): versions.addItem(f"v{v['number']} · {v['model']} · {state_name(v['status'])}",v['id'])
-            versions.setCurrentIndex(max(0,versions.findData(self.version_id)))
-            versions.activated.connect(lambda _:self.open_audio(self.audio_id,versions.currentData()))
-            body.addWidget(versions)
-        if self.transcript_id:
-            transcript=self.store.one('SELECT status,engine FROM transcripts WHERE id=?',(self.transcript_id,))
-            if transcript: body.addWidget(label(f"Chép lời: {state_name(transcript['status'])} · {transcript['engine']} · Mốc giờ theo ranh giới lời nói",'muted',True))
-        self.notes_toggle=QCheckBox('Hiện ghi chú thuật ngữ'); self.notes_toggle.setChecked(self.store.setting('show_notes',False))
-        self.notes_toggle.toggled.connect(self.toggle_notes); body.addWidget(self.notes_toggle)
-        self.timeline=QTableWidget(0,3); self.timeline.setObjectName('bilingual_timeline')
-        self.timeline.setHorizontalHeaderLabels(['Mốc giờ','ZH · TIẾNG TRUNG','VI · TIẾNG VIỆT'])
-        self.timeline.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.ResizeToContents)
-        self.timeline.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch)
-        self.timeline.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeMode.Stretch)
-        self.timeline.verticalHeader().hide(); self.timeline.setWordWrap(True)
-        self.timeline.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.timeline.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.timeline.setMinimumHeight(360)
+        self.file_page=FilePage(self,audio)
+        self.timeline=self.file_page.timeline; self.notes_toggle=self.file_page.notes_toggle
+        self.seek_slider=self.file_page.seek_slider; self.play_label=self.file_page.play_label
         self.timeline.cellDoubleClicked.connect(self.edit_segment)
         self.timeline.cellClicked.connect(self.seek_segment)
-        body.addWidget(self.timeline)
-        player_row=QHBoxLayout(); player_row.addWidget(button('▶ / Ⅱ',self.toggle_play))
-        self.play_label=label('00:00','muted'); player_row.addWidget(self.play_label)
-        self.seek_slider=QSlider(Qt.Orientation.Horizontal); self.seek_slider.setRange(0,max(1,int((audio or {}).get('duration',0)*1000)))
-        self.seek_slider.sliderMoved.connect(self.player.setPosition); player_row.addWidget(self.seek_slider,1)
-        speed=ComboBox(); speed.addItems(['0.75×','1×','1.25×','1.5×']); speed.setCurrentIndex(1)
-        speed.currentIndexChanged.connect(lambda i:self.player.setPlaybackRate([.75,1,1.25,1.5][i])); player_row.addWidget(speed)
-        body.addLayout(player_row); self.content_layout.addWidget(panel)
+        self.content_layout.addWidget(self.file_page,1)
         self.fill_timeline()
+        self.refresh_player()
+        if audio: self.load_waveform(audio)
 
     def fill_timeline(self):
         if not hasattr(self,'timeline') or self.page not in ('file','live'): return
@@ -309,6 +333,71 @@ class WorkspaceWindow(MainWindow):
             self.timeline.setRowHeight(i,max(100,self.timeline.rowHeight(i)))
         self.timeline.resizeRowsToContents()
         for i in range(len(rows)): self.timeline.setRowHeight(i,max(95,self.timeline.rowHeight(i)+14))
+        self.refresh_file_state()
+
+    def refresh_file_state(self):
+        if self.page!='file' or not hasattr(self,'file_page'): return
+        transcript=self.store.one('SELECT status,engine FROM transcripts WHERE id=?',(self.transcript_id,)) if self.transcript_id else None
+        version=self.store.one('SELECT status FROM versions WHERE id=?',(self.version_id,)) if self.version_id else None
+        rows=getattr(self,'timeline_rows',[])
+        ready=bool(transcript and transcript['status']=='complete' and rows)
+        idle=not self.is_busy and not self.recording
+        self.transcribe_button.setEnabled(idle)
+        self.transcribe_button.setText('Chép lời và dịch' if self.models else 'Chép lời tiếng Trung')
+        self.transcribe_button.setToolTip('Chép lời tiếp tục độc lập; các đoạn đã chốt được dịch song song.' if self.models else 'Chép lời cục bộ. Kết nối Codex để tự dịch các đoạn đã chốt.')
+        self.translate_button.setEnabled(idle and ready)
+        self.file_page.export_zh.setEnabled(bool(rows))
+        self.file_page.export_vi.setEnabled(bool(version and version['status']=='complete' and ready and all(row['translation_status']=='complete' for row in rows)))
+        steps=self.file_page.steps
+        steps.completed=3 if version and version['status']=='complete' else 2 if ready else 1 if self.audio_id else 0
+        steps.setToolTip('Chép lời: '+state_name(transcript['status'])+' · '+transcript['engine']+' · Mốc giờ theo ranh giới lời nói' if transcript else 'Chọn âm thanh → Chép lời tiếng Trung → Tạo bản dịch')
+        steps.update()
+        table=self.file_page.timeline
+        table.empty.setVisible(not rows)
+        if not rows:
+            if self.is_busy:
+                title,description='Đang xử lý…','Nội dung sẽ xuất hiện theo từng đoạn đã chốt.'
+            elif transcript and transcript['status'] in ('failed','interrupted'):
+                title,description='Chép lời chưa hoàn tất','Âm thanh được giữ lại. Chép lời lại hoặc tiếp tục từ Thư viện.'
+            elif self.audio_id:
+                title,description='Sẵn sàng chép lời','Bắt đầu chép lời để xem nội dung Trung – Việt tại đây.'
+            else:
+                title,description='Chọn âm thanh để bắt đầu','Chọn file hoặc kéo thả âm thanh vào cửa sổ.'
+            table.empty_title.setText(title)
+            table.empty_description.setText(description)
+
+    def load_waveform(self,audio):
+        identifier=audio['id']
+        if identifier in self.waveforms:
+            self.file_page.seek_slider.peaks=self.waveforms[identifier]
+            self.file_page.seek_slider.update(); return
+        if identifier in self.waveform_pending: return
+        self.waveform_pending.add(identifier)
+        path=self.store.audio_path(identifier)
+        def done(peaks):
+            self.waveform_pending.discard(identifier); self.waveforms[identifier]=peaks
+            if self.page=='file' and self.audio_id==identifier:
+                self.file_page.seek_slider.peaks=peaks; self.file_page.seek_slider.update()
+        def failed(message):
+            self.waveform_pending.discard(identifier)
+            if not self.waveform_cancel.is_set(): self.statusBar().showMessage('Không tải được dạng sóng. Vẫn có thể phát và tua âm thanh.')
+        self.submit(lambda _:waveform_peaks(path,audio['duration'],cancel=self.waveform_cancel),done,busy=False,error_handler=failed)
+
+    def refresh_player(self,*args):
+        if self.page!='file' or not hasattr(self,'file_page'): return
+        playing=self.player.playbackState()==QMediaPlayer.PlaybackState.PlayingState
+        control=self.file_page.play_button
+        control.set_playing(playing)
+        control.setAccessibleName('Tạm dừng' if playing else 'Phát âm thanh')
+        control.setToolTip(control.accessibleName())
+        muted=self.audio_output.isMuted()
+        control=self.file_page.volume_button
+        control.setIcon(icon('volume-off' if muted else 'volume',self.colors['text'],24)); control.setIconSize(QSize(24,24))
+        control.setAccessibleName('Bật âm thanh' if muted else 'Tắt âm thanh')
+        control.setToolTip(control.accessibleName())
+        if self.player.duration()>0:
+            self.seek_slider.setMaximum(self.player.duration())
+            self.file_page.duration_label.setText(timestamp(self.player.duration()/1000))
 
     def toggle_play(self):
         if not self.audio_id: return
@@ -368,47 +457,24 @@ class WorkspaceWindow(MainWindow):
         except Exception as error: self.error(error)
 
     def show_library(self):
-        self.context_action('Tất cả âm thanh','library'); self.context_action('Nhập âm thanh mới','file'); self.context_action('Thùng rác','trash')
+        for title,glyph,callback in (
+            ('Tất cả âm thanh','library',lambda:self.library_page.show_all()),
+            ('Nhập âm thanh mới','upload',self.choose_audio),
+            ('Thùng rác','trash',lambda:self.navigate('trash')),
+        ):
+            control=button(title,callback); control.setProperty('library_nav',True)
+            control.setProperty('library_selected',glyph=='library')
+            control.setIcon(icon(glyph,self.colors['text'],20)); control.setIconSize(QSize(20,20))
+            self.context_layout.addWidget(control)
+            if glyph=='upload': self.library_import_action=control
         self.context_layout.addWidget(label('Mỗi nguồn chỉ lưu một lần. Các phiên bản cùng dùng âm thanh gốc.','muted',True))
-        self.header.addWidget(button('Nhập file mới',self.choose_audio,True))
-        search=QLineEdit(); search.setPlaceholderText('Tìm bài giảng, tên file…'); self.content_layout.addWidget(search)
-        table=QTableWidget(0,5); table.setHorizontalHeaderLabels(['Âm thanh','Thời lượng','Ngày nhập','Nguồn','Bản dịch'])
-        table.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.Stretch)
-        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows); table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        table.verticalHeader().hide(); table.setMinimumHeight(230)
-        details,detail_layout=card('Các phiên bản')
-        def select():
-            current=table.currentRow()
-            if current<0: return
-            audio=table.item(current,0).data(Qt.ItemDataRole.UserRole)
-            clear(detail_layout); detail_layout.addWidget(label(audio['filename']+' · 1 âm thanh gốc','heading',True))
-            row=QHBoxLayout(); row.addWidget(button('Mở / chép lời',lambda:self.open_audio(audio['id'])))
-            row.addWidget(button('Xóa âm thanh',lambda:self.delete_audio(audio['id']),danger=True)); detail_layout.addLayout(row)
-            versions=self.store.versions(audio['id'])
-            for version in versions:
-                item,item_layout=card(f"v{version['number']} · {version['model']}")
-                item_layout.addWidget(label(f"{version['effort']} · {version['created']} · {state_name(version['status'])}",'muted',True))
-                actions=QHBoxLayout(); actions.addWidget(button('Mở bản dịch',lambda checked=False,v=version:self.open_audio(v['audio_id'],v['id'])))
-                actions.addWidget(button('Xóa bản dịch',lambda checked=False,v=version:self.delete_version(v),danger=True))
-                item_layout.addLayout(actions)
-                if version['status']!='complete': item_layout.addWidget(button('Tiếp tục / thử lại',lambda checked=False,v=version:self.resume_translation(v['id'])))
-                detail_layout.addWidget(item)
-            if len(versions)>1: detail_layout.addWidget(button('So sánh hai phiên bản',lambda:self.compare_versions(versions[1],versions[0])))
-        def populate():
-            rows=[x for x in self.store.list_audio() if search.text().casefold() in (x['title']+' '+x['filename']).casefold()]
-            table.setRowCount(len(rows))
-            for i,row in enumerate(rows):
-                values=[row['title']+'\n'+row['filename'],timestamp(row['duration']),row['created'][:10],'Tải lên' if row['source']=='upload' else 'Ghi trực tiếp',str(row['version_count'])]
-                for j,text in enumerate(values):
-                    item=QTableWidgetItem(text); item.setData(Qt.ItemDataRole.UserRole,row); table.setItem(i,j,item)
-                table.setRowHeight(i,64)
-            if rows: table.selectRow(0); select()
-            else: clear(detail_layout); detail_layout.addWidget(label('Chưa có âm thanh phù hợp.','muted'))
-        table.itemSelectionChanged.connect(select); table.cellDoubleClicked.connect(lambda r,c:self.open_audio(table.item(r,0).data(Qt.ItemDataRole.UserRole)['id']))
-        search.textChanged.connect(populate); populate()
-        split=QSplitter(Qt.Orientation.Horizontal if self.width()>=1250 else Qt.Orientation.Vertical)
-        split.addWidget(table); split.addWidget(details); split.setStretchFactor(0,3); split.setStretchFactor(1,2)
-        split.setSizes([650,360]); self.content_layout.addWidget(split)
+        self.library_page=LibraryPage(self); self.content_layout.addWidget(self.library_page,1)
+        self.refresh_library_state()
+
+    def refresh_library_state(self):
+        if self.page!='library' or not hasattr(self,'library_page'): return
+        self.library_page.refresh_busy()
+        self.library_import_action.setEnabled(not self.is_busy and not self.recording)
 
     def delete_audio(self,audio_id):
         if self.is_busy or self.recording: self.error('Hãy dừng tác vụ trước khi xóa.'); return
@@ -474,30 +540,33 @@ class WorkspaceWindow(MainWindow):
         sets=self.store.rows('SELECT * FROM glossaries ORDER BY name')
         chosen=next((x for x in sets if x['id']==self.glossary_id),sets[0] if sets else None)
         self.glossary_id=chosen['id'] if chosen else None
-        for item in sets:
-            self.context_layout.addWidget(button(item['name'],lambda checked=False,g=item['id']:self.select_glossary(g)))
-        self.context_layout.addWidget(button('Tạo bộ mới',self.new_glossary))
-        panel,body=card('Bối cảnh & Thuật ngữ')
-        self.glossary_name=QLineEdit(chosen['name'] if chosen else '')
-        self.field(body,'Tên bộ',self.glossary_name)
-        self.glossary_context=QPlainTextEdit(chosen['context'] if chosen else ''); self.glossary_context.setMinimumHeight(120)
-        self.field(body,'Bối cảnh bài giảng',self.glossary_context)
+        create=button('Tạo bộ mới',self.new_glossary); create.setObjectName('glossary_new')
+        create.setIcon(icon('plus',self.colors['text'],18)); create.setIconSize(QSize(18,18))
+        self.context_layout.addWidget(create)
+        self.glossary_sets=None
+        if sets:
+            self.glossary_sets=QListWidget(); self.glossary_sets.setObjectName('glossary_sets')
+            self.glossary_sets.setSpacing(4); self.glossary_sets.setIconSize(QSize(18,18))
+            self.glossary_sets.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.glossary_sets.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+            for item in sets:
+                entry=QListWidgetItem(icon('book',self.colors['text'],18),item['name'])
+                entry.setData(Qt.ItemDataRole.UserRole,item['id']); entry.setToolTip(item['name']); entry.setSizeHint(QSize(0,40))
+                self.glossary_sets.addItem(entry)
+                if item['id']==self.glossary_id: self.glossary_sets.setCurrentItem(entry)
+            self.glossary_sets.currentItemChanged.connect(lambda current,previous:self.select_glossary(current.data(Qt.ItemDataRole.UserRole)) if current else None)
+            self.context_layout.addWidget(self.glossary_sets)
+        else:
+            self.context_layout.addWidget(label('Các bộ đã lưu sẽ xuất hiện tại đây.','muted',True))
         entries=json.loads(chosen['entries']) if chosen else []
-        self.glossary_table=QTableWidget(len(entries)+1,3); self.glossary_table.setHorizontalHeaderLabels(['Tiếng Trung','Tiếng Việt ưu tiên','Ghi chú'])
-        self.glossary_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch); self.glossary_table.setMinimumHeight(250)
-        for i,item in enumerate(entries):
-            for j,key in enumerate(['zh','vi','note']): self.glossary_table.setItem(i,j,QTableWidgetItem(item.get(key,'')))
-        body.addWidget(self.glossary_table); actions=QHBoxLayout(); actions.addWidget(button('Thêm dòng',lambda:self.glossary_table.insertRow(self.glossary_table.rowCount())))
-        actions.addWidget(button('Xóa dòng chọn',lambda:self.glossary_table.removeRow(self.glossary_table.currentRow())))
-        actions.addWidget(button('Lưu bộ thuật ngữ',self.save_glossary,True)); body.addLayout(actions); self.content_layout.addWidget(panel)
-        self.glossary_clean=self.glossary_state()
+        self.glossary_page=GlossaryPage(self,chosen,entries)
+        self.glossary_name=self.glossary_page.name; self.glossary_context=self.glossary_page.context; self.glossary_table=self.glossary_page.table
+        self.content_layout.addWidget(self.glossary_page,1)
+        self.glossary_clean=self.glossary_page.current_state(); self.glossary_page.refresh_state()
 
     def glossary_state(self):
-        entries=[]
-        for i in range(self.glossary_table.rowCount()):
-            row=[self.glossary_table.item(i,j).text() if self.glossary_table.item(i,j) else '' for j in range(3)]
-            if any(row): entries.append(row)
-        return [self.glossary_name.text(),self.glossary_context.toPlainText(),entries]
+        self.glossary_page.commit_editor()
+        return self.glossary_page.current_state()
 
     def confirm_glossary_changes(self):
         if self.page!='prompts' or self.glossary_clean is None or self.glossary_state()==self.glossary_clean: return True
@@ -508,7 +577,14 @@ class WorkspaceWindow(MainWindow):
         self.glossary_clean=self.glossary_state(); return True
 
     def select_glossary(self,identifier):
-        if not self.confirm_glossary_changes(): return
+        if not self.confirm_glossary_changes():
+            if self.glossary_sets:
+                self.glossary_sets.blockSignals(True)
+                for i in range(self.glossary_sets.count()):
+                    item=self.glossary_sets.item(i)
+                    if item.data(Qt.ItemDataRole.UserRole)==self.glossary_id: self.glossary_sets.setCurrentItem(item); break
+                self.glossary_sets.blockSignals(False)
+            return
         self.glossary_id=identifier; self.navigate('prompts')
 
     def new_glossary(self):
@@ -517,6 +593,7 @@ class WorkspaceWindow(MainWindow):
         if ok and name.strip(): self.glossary_id=self.store.save_glossary(name,'',[]); self.navigate('prompts')
 
     def save_glossary(self,*,refresh=True):
+        self.glossary_page.commit_editor()
         entries=[]
         for i in range(self.glossary_table.rowCount()):
             entries.append({key:(self.glossary_table.item(i,j).text() if self.glossary_table.item(i,j) else '') for j,key in enumerate(['zh','vi','note'])})
@@ -525,14 +602,12 @@ class WorkspaceWindow(MainWindow):
             self.store.set_setting('glossary_id',self.glossary_id); self.store.set_setting('context',self.glossary_context.toPlainText())
             self.glossary_clean=self.glossary_state()
             if refresh: self.navigate('prompts')
+            else: self.glossary_page.refresh_state()
             self.statusBar().showMessage('Đã lưu bộ thuật ngữ.')
             return True
         except Exception as error: self.error(error); return False
 
     def show_settings(self):
-        refresh=tonal_button('Kiểm tra kết nối','refresh',self.colors,self.check_codex)
-        refresh.setObjectName('settings_check_connection'); refresh.setFixedWidth(180)
-        self.header.addWidget(refresh)
         self.settings_page=SettingsPage(self); self.settings_page.add_navigation(self.context_layout)
         self.content_layout.addWidget(self.settings_page,1)
 
@@ -556,11 +631,20 @@ class WorkspaceWindow(MainWindow):
         self.submit(lambda progress:self.model_manager.install(key,progress,self.cancel_event),lambda _:self.navigate('settings'),lambda message:self.statusBar().showMessage(str(message)))
 
     def transcribe(self):
+        if self.is_busy: self.error('Một tác vụ đang chạy. Hãy chờ hoặc dừng tác vụ trước.'); return
         if not self.audio_id: self.choose_audio(); return
         if self.recording: self.error('Hãy kết thúc phiên ghi âm trước.'); return
         if self.transcript_id and self.store.segments(self.transcript_id):
             if QMessageBox.question(self,'Chép lời lại','Tạo bản chép lời mới? Các bản cũ được giữ nguyên.',QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,QMessageBox.StandardButton.No)!=QMessageBox.StandardButton.Yes: return
         self.capture_options(); self.cancel_event.clear(); audio_id=self.audio_id
+        if self.models:
+            try: options=self.translation_options()
+            except Exception as error: self.error(error); return
+            known_models=list(self.models)
+            self.submit(lambda emit:transcribe_translate_job(self.store,self.model_manager,audio_id,options,
+                emit,self.cancel_event,self.store.setting('asr_threads',4),known_models=known_models),
+                self.file_pipeline_done,self.file_pipeline_event)
+            return
         def progress(item):
             if item.get('transcript_id'):
                 self.transcript_id=item['transcript_id']; self.version_id=None
@@ -572,41 +656,43 @@ class WorkspaceWindow(MainWindow):
         self.submit(lambda emit:transcribe_job(self.store,self.model_manager,audio_id,emit,self.cancel_event,self.store.setting('asr_threads',4)),done,progress)
 
     def show_live(self):
-        import sounddevice as sd
         self.mic_select=ComboBox()
-        for i,device in enumerate(sd.query_devices()):
-            if device['max_input_channels']>0: self.mic_select.addItem(device['name'],i)
-        chosen=self.mic_select.findData(self.store.setting('mic_device')); self.mic_select.setCurrentIndex(max(0,chosen))
+        devices=input_devices(); identity=self.store.setting('mic_device_identity')
+        chosen=selected_input(identity,devices)
+        self.mic_select.addItem('Chọn microphone…',None)
+        selected=0
+        for device in devices:
+            name=device['name']+(' · '+device['hostapi'] if device['hostapi'] else '')
+            self.mic_select.addItem(name,device)
+            self.mic_select.setItemData(self.mic_select.count()-1,name,Qt.ItemDataRole.ToolTipRole)
+            if device==chosen: selected=self.mic_select.count()-1
+        self.mic_select.setCurrentIndex(selected)
+        self.mic_select.setToolTip('Chọn đúng mic đang thu giọng nói. Tên và trình điều khiển được nhớ thay cho số thứ tự thiết bị.')
+        if identity is not None and chosen is None:
+            self.mic_select.setToolTip('Microphone đã lưu chưa kết nối hoặc không xác định được duy nhất. Hãy chọn lại mic; ứng dụng sẽ không tự đổi sang thiết bị khác.')
         self.field(self.context_layout,'Microphone',self.mic_select)
         self.options()
-        controls,body=card()
-        row=QHBoxLayout(); self.live_timer_label=label('Đang dừng · 00:00','heading'); row.addWidget(self.live_timer_label,1)
-        self.record_button=button('Bắt đầu',self.start_recording,True); self.pause_button=button('Tạm dừng',self.pause_recording); self.stop_button=button('Dừng & lưu',self.stop_recording,danger=True)
-        self.record_button.setEnabled(not self.recording); self.pause_button.setEnabled(bool(self.recording)); self.stop_button.setEnabled(bool(self.recording))
-        row.addWidget(self.record_button); row.addWidget(self.pause_button); row.addWidget(self.stop_button); body.addLayout(row); self.content_layout.addWidget(controls)
-        self.microphone_level=QProgressBar(); self.microphone_level.setRange(0,100); self.microphone_level.setValue(0)
-        self.microphone_level.setFormat('Mức tín hiệu microphone: %p%'); body.addWidget(self.microphone_level)
-        panel,body=card('Dòng thời gian song ngữ · Chỉ dịch câu đã chốt')
-        self.timeline=QTableWidget(0,3); self.timeline.setHorizontalHeaderLabels(['Mốc giờ','ZH · TIẾNG TRUNG','VI · TIẾNG VIỆT'])
-        self.timeline.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeMode.ResizeToContents)
-        self.timeline.horizontalHeader().setSectionResizeMode(1,QHeaderView.ResizeMode.Stretch)
-        self.timeline.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeMode.Stretch)
-        self.timeline.verticalHeader().hide(); self.timeline.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers); self.timeline.setMinimumHeight(330)
-        self.follow_live=QCheckBox('Theo đoạn mới nhất'); self.follow_live.setChecked(True); body.addWidget(self.follow_live)
-        self.timeline.verticalScrollBar().actionTriggered.connect(lambda _:self.follow_live.setChecked(False))
-        body.addWidget(self.timeline)
-        self.interim_label=label('Đang nghe · Câu chưa chốt\n'+self.live_interim,'muted',True)
-        self.interim_label.setStyleSheet(f"background:{self.colors['soft']};border:1px dashed {self.colors['line']};border-radius:12px;padding:15px")
-        body.addWidget(self.interim_label); self.content_layout.addWidget(panel)
+        self.live_page=LivePage(self); self.content_layout.addWidget(self.live_page,1)
+        self.timeline=self.live_page.timeline; self.follow_live=self.live_page.follow
+        self.record_button=self.live_page.record_button; self.pause_button=self.live_page.pause_button
+        self.stop_button=self.live_page.stop_button; self.microphone_level=self.live_page.meter
         self.render_live()
-        for widget in [self.mic_select,*self.option_widgets]: widget.setEnabled(not self.recording)
+
+    def refresh_live_state(self):
+        if self.page!='live' or not hasattr(self,'live_page'): return
+        recording=bool(self.recording); paused=recording and self.recording.paused
+        seconds=self.recording.samples/16000 if recording else 0
+        state=('Đang lưu…' if self.live_stopping else 'Tạm dừng' if paused else 'Đang ghi âm' if self.recording.samples else 'Chờ microphone') if recording else 'Đang xử lý…' if self.is_busy else 'Đang dừng'
+        self.live_page.set_state(state,seconds,self.live_level,recording,paused,self.is_busy or self.live_stopping)
+        for widget in [self.mic_select,*self.option_widgets]: widget.setEnabled(not recording and not self.is_busy)
 
     def start_recording(self):
         if self.is_busy or self.recording: self.error('Một tác vụ đang chạy.'); return
-        if self.mic_select.currentData() is None: self.error('Không tìm thấy microphone.'); return
-        self.capture_options(); device=self.mic_select.currentData(); self.store.set_setting('mic_device',device)
+        if self.mic_select.currentData() is None: self.error('Hãy chọn microphone đang dùng để thu giọng nói.'); return
+        self.capture_options(); device=self.mic_select.currentData()
         self.cancel_event.clear()
-        self.live_segments=[]; self.live_interim=''
+        self.live_segments=[]; self.live_interim=''; self.live_level=0; self.live_follow=True
+        self.follow_live.setChecked(True); self.render_live()
         self.statusBar().showMessage('Đang tải mô hình và mở microphone…')
         try: options=self.translation_options() if self.models and self.store.setting('model') else None
         except Exception as error: self.error(error); return
@@ -629,19 +715,19 @@ class WorkspaceWindow(MainWindow):
             state='Tạm dừng' if self.recording.paused else 'Đang ghi âm' if self.recording.samples else 'Chờ dữ liệu microphone'
             value=state+' · '+timestamp(self.recording.samples/16000)
             self.activity.setText(value)
-            if self.page=='live': self.live_timer_label.setText(value)
+            self.refresh_live_state()
 
     def pause_recording(self):
         if self.recording:
             try:
-                paused=self.recording.pause(); self.pause_button.setText('Tiếp tục' if paused else 'Tạm dừng')
+                self.recording.pause(); self.live_level=0; self.update_record_timer()
             except Exception as error: self.error(error)
 
     def stop_recording(self):
         if not self.recording or self.is_busy: return
-        session=self.recording; self.stop_button.setEnabled(False)
+        session=self.recording; self.live_stopping=True
         def done(result):
-            self.recording=None
+            self.recording=None; self.live_stopping=False; self.live_level=0; self.live_interim=''
             if self.record_timer: self.record_timer.stop()
             if not result.get('audio_id'):
                 self.navigate('live'); self.error(result['warning']); return
@@ -650,8 +736,9 @@ class WorkspaceWindow(MainWindow):
             self.navigate('file')
             if result.get('warning'): self.error(result['warning'])
         def failed(message):
+            self.live_stopping=False
             if session.closed.is_set():
-                self.recording=None
+                self.recording=None; self.live_level=0
                 if self.record_timer: self.record_timer.stop()
                 self.recovered=self.store.rows("SELECT * FROM jobs WHERE state='interrupted'")
                 self.navigate('settings')
@@ -664,23 +751,22 @@ class WorkspaceWindow(MainWindow):
         elif kind=='translation':
             for row in self.live_segments:
                 if row.get('id')==item['id']: row.update(item); break
-        elif kind=='interim': self.live_interim=item.get('zh','')
+        elif kind=='interim':
+            self.live_interim=item.get('zh','')
+            if self.page=='live': self.live_page.set_interim(self.live_interim)
+            return
         elif kind=='warning': self.statusBar().showMessage(item['message']); return
-        elif kind=='level' and self.page=='live': self.microphone_level.setValue(item.get('level',0))
+        elif kind=='level':
+            self.live_level=max(0,min(100,int(item.get('level',0))))
+            if self.page=='live' and 'rms_dbfs' in item:
+                self.microphone_level.setToolTip(f"Mức tín hiệu gốc: {item['rms_dbfs']:.1f} dBFS. Thang hiển thị theo âm lượng; âm thanh lưu không bị tăng giảm.")
+            self.refresh_live_state(); return
         if self.page=='live': self.render_live()
 
     def render_live(self):
-        if self.page!='live' or not hasattr(self,'timeline'): return
-        position=self.timeline.verticalScrollBar().value(); self.timeline.setRowCount(len(self.live_segments))
-        for i,row in enumerate(self.live_segments):
-            state=row.get('translation_status','untranslated')
-            translated=row.get('vi') or {'queued':'Trong hàng đợi dịch','translating':'Đang dịch…','failed':'Dịch lỗi · Lưu phiên để thử lại'}.get(state,'Đã chốt câu · Chưa kết nối dịch')
-            if row.get('note') and self.store.setting('show_notes',False): translated+='\nⓘ '+row['note']
-            for j,text in enumerate([timestamp(row['start'])+'\n'+timestamp(row['end']),row['zh'],translated]): self.timeline.setItem(i,j,QTableWidgetItem(text))
-            self.timeline.setRowHeight(i,95)
-        self.interim_label.setText('Đang nghe · Câu chưa chốt (có thể thay đổi)\n'+self.live_interim)
-        if self.follow_live.isChecked(): self.timeline.scrollToBottom()
-        else: self.timeline.verticalScrollBar().setValue(position)
+        if self.page!='live' or not hasattr(self,'live_page'): return
+        self.live_page.set_segments(self.live_segments,self.store.setting('show_notes',False))
+        self.live_page.set_interim(self.live_interim); self.refresh_live_state()
         if self.recording: self.update_record_timer()
 
     def recover_job(self,job):
@@ -692,6 +778,7 @@ class WorkspaceWindow(MainWindow):
         elif job['kind']=='transcribe':
             self.audio_id=payload['audio_id']; self.transcript_id=None; self.transcribe()
         elif job['kind']=='translate': self.resume_translation(job['target'])
+        elif job['kind']=='transcribe_translate': self.resume_translation(job['target'])
 
     def check_codex(self):
         def work(progress): return capabilities(find_codex(self.store.setting('codex_path')),self.store.root/'work')
@@ -754,15 +841,56 @@ class WorkspaceWindow(MainWindow):
         if self.page=='file': self.fill_timeline()
         self.statusBar().showMessage(f"Đang dịch: {item['done']}/{item['total']} đoạn")
 
+    def file_pipeline_event(self,item):
+        self.file_pipeline_progress=item
+        if item['type']=='started' and self.audio_id==item['audio_id']:
+            self.transcript_id=item['transcript_id']; self.version_id=item['version_id']
+        if not self.file_pipeline_timer.isActive(): self.file_pipeline_timer.start()
+
+    def render_file_pipeline_progress(self):
+        item=self.file_pipeline_progress
+        if not item: return
+        if self.page=='file' and self.audio_id==item['audio_id'] and self.version_id==item['version_id']:
+            selector=self.file_page.versions
+            if selector.findData(item['version_id'])<0:
+                version=self.store.one('SELECT number,model FROM versions WHERE id=?',(item['version_id'],))
+                selector.addItem(f"v{version['number']} · {version['model']}",item['version_id'])
+            selector.setCurrentIndex(selector.findData(item['version_id']))
+            self.fill_timeline()
+        phase=f"Đang chép lời {timestamp(item['seconds'])}" if not item['asr_done'] else f"Đã chốt {item['recognized']} đoạn"
+        translated=f"Đã dịch {item['translated']}/{item['recognized']} · Chờ {item['pending']} đoạn"
+        if item['translation_error']: translated=f"Dịch tạm dừng · {item['pending']} đoạn đã lưu để thử lại"
+        self.statusBar().showMessage(phase+' · '+translated)
+
+    def file_pipeline_done(self,result):
+        self.file_pipeline_timer.stop(); self.file_pipeline_progress=None
+        self.recovered=[job for job in self.recovered if not (job['kind']=='transcribe_translate' and job['target']==result['version_id'])]
+        self.open_audio(result['audio_id'],result['version_id'])
+        if result['cancelled']:
+            self.statusBar().showMessage('Đã dừng. Các đoạn đã lưu được giữ; tiếp tục từ Thư viện khi cần.')
+        elif result['warnings']:
+            self.error('Các đoạn đã xử lý được giữ trong thư viện. Phần chưa hoàn tất: '+' · '.join(result['warnings'].values()))
+        else:
+            self.statusBar().showMessage('Đã chép lời và dịch xong.')
+
     def resume_translation(self,identifier):
+        if self.is_busy: self.error('Một tác vụ đang chạy. Hãy chờ hoặc dừng tác vụ trước.'); return
         if self.recording: self.error('Hãy kết thúc ghi âm trước.'); return
         self.cancel_event.clear()
         version=self.store.one('SELECT * FROM versions WHERE id=?',(identifier,))
+        paired=self.store.one("SELECT id FROM jobs WHERE kind='transcribe_translate' AND target=? LIMIT 1",(identifier,))
+        if paired:
+            known_models=list(self.models)
+            self.submit(lambda emit:transcribe_translate_job(self.store,self.model_manager,version['audio_id'],None,
+                emit,self.cancel_event,self.store.setting('asr_threads',4),version_id=identifier,known_models=known_models),
+                self.file_pipeline_done,self.file_pipeline_event)
+            return
         def work(progress):
             executable=find_codex(self.store.setting('codex_path')); actual=capabilities(executable,self.store.root/'work',self.cancel_event)
             return translate_version(self.store,executable,identifier,actual['models'],progress,self.cancel_event)
         self.submit(work,lambda _:self.open_audio(version['audio_id'],identifier),self.translation_progress)
-    def cancel_work(self): self.cancel_event.set()
+    def cancel_work(self):
+        self.cancel_event.set(); self.cancel_button.setEnabled(False); self.activity.setText('Đang dừng…')
 
     def dragEnterEvent(self,event):
         urls=event.mimeData().urls()
@@ -778,4 +906,5 @@ class WorkspaceWindow(MainWindow):
         if self.is_busy or self.recording:
             self.error('Hãy dừng tác vụ/ghi âm và lưu kết quả trước khi đóng ứng dụng.'); event.ignore(); return
         if not self.confirm_glossary_changes(): event.ignore(); return
+        self.waveform_cancel.set()
         self.player.stop(); event.accept()

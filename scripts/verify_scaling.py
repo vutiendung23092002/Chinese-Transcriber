@@ -7,7 +7,7 @@ import sys
 
 if '--child' in sys.argv:
     from PySide6.QtCore import QCoreApplication,QEvent
-    from PySide6.QtWidgets import QApplication,QScrollArea,QComboBox,QPushButton,QPlainTextEdit
+    from PySide6.QtWidgets import QApplication,QScrollArea,QComboBox,QPushButton,QPlainTextEdit,QSlider,QToolButton
     from chinese_transcriber.storage import Store
     from chinese_transcriber.workspace import WorkspaceWindow
     from chinese_transcriber.widgets import PAGES
@@ -23,9 +23,24 @@ if '--child' in sys.argv:
             for key,_,_ in PAGES:
                 window.navigate(key)
                 QCoreApplication.sendPostedEvents(None,QEvent.Type.DeferredDelete); app.processEvents()
-                widgets=window.context.findChildren(QComboBox)+window.context.findChildren(QPushButton)+window.context.findChildren(QPlainTextEdit)
-                inside=all(x.mapTo(window.context,x.rect().topLeft()).y()>=0 and x.mapTo(window.context,x.rect().bottomRight()).y()<window.context.height() for x in widgets if x.isVisible())
-                checks.append(inside and (window.rail.width(),window.context.width())==expected and not window.context.findChildren(QScrollArea))
+                widgets=window.context.findChildren(QComboBox)+window.context.findChildren(QPushButton)+window.context.findChildren(QPlainTextEdit)+window.context.findChildren(QSlider)+window.context.findChildren(QToolButton)
+                panel=window.context_panel
+                inside=all(panel.contentsRect().contains(x.mapTo(panel,x.rect().topLeft())) and panel.contentsRect().contains(x.mapTo(panel,x.rect().bottomRight())) for x in widgets if x.isVisible())
+                aligned=panel.geometry()==window.context.rect().adjusted(6,24,-6,-18) and panel.mapTo(window,panel.rect().bottomRight()).y()==window.rail.pill.mapTo(window,window.rail.pill.rect().bottomRight()).y()
+                live_inside=True
+                if key=='live':
+                    page=window.live_page
+                    controls=(page.transport,page.record_button,page.pause_button,page.stop_button,page.timeline,page.draft)
+                    live_inside=all(page.contentsRect().contains(x.mapTo(page,x.rect().topLeft())) and page.contentsRect().contains(x.mapTo(page,x.rect().bottomRight())) for x in controls) and window.scroll.horizontalScrollBar().maximum()==0
+                if key=='library':
+                    page=window.library_page
+                    controls=(page.search,page.import_button,page.table,page.details)
+                    live_inside=all(page.contentsRect().contains(x.mapTo(page,x.rect().topLeft())) and page.contentsRect().contains(x.mapTo(page,x.rect().bottomRight())) for x in controls) and window.scroll.horizontalScrollBar().maximum()==0
+                if key=='prompts':
+                    page=window.glossary_page
+                    controls=(page.name,page.context,page.table,page.add_button,page.delete_button,page.save_button)
+                    live_inside=all(page.contentsRect().contains(x.mapTo(page,x.rect().topLeft())) and page.contentsRect().contains(x.mapTo(page,x.rect().bottomRight())) for x in controls) and window.scroll.horizontalScrollBar().maximum()==0
+                checks.append(inside and aligned and live_inside and (window.rail.width(),window.context.width())==expected and not window.context.findChildren(QScrollArea))
     report=dict(scale=os.environ['QT_SCALE_FACTOR'],views=len(checks),ok=all(checks))
     print(json.dumps(report)); window.close()
     sys.exit(0 if report['ok'] else 1)

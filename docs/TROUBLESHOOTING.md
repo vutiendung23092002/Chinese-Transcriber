@@ -1,5 +1,27 @@
 # Xử lý sự cố
 
+## Chữ Trung tiếp tục xuất hiện nhưng tiếng Việt còn chờ
+
+Trong **Chép lời và dịch**, ASR và dịch là hai luồng độc lập. Dịch có thể chậm hơn ASR; thanh trạng thái cho biết số đoạn đã chốt/đã dịch/còn chờ. Phần chép lời không chờ mạng hoặc phản hồi Codex. Đoạn chờ nằm trong SQLite, không mất khi giao diện chuyển trang.
+
+Nếu dịch báo lỗi, chép lời vẫn tiếp tục. Chờ tác vụ kết thúc hoặc bấm **Dừng tác vụ**, sau đó chọn **Thư viện → Tiếp tục / thử lại** trên đúng bản dịch. Ứng dụng giữ model/bối cảnh đã dùng, giữ phần đã dịch và tiếp tục phần còn thiếu; nếu ASR cũng chưa xong thì tiếp tục cùng transcript, không tạo thêm bản trùng. Không cần bấm Tạo bản dịch mới để thử lại. Dừng là thao tác có phối hợp, giữ các đoạn đã lưu và chờ lượt gọi đang chạy đóng lại.
+
+## App báo Not Responding khi phát âm thanh trong lúc dịch
+
+Bản sửa ngày 15/11/2026 loại bỏ Python Qt message handler khỏi đường log của FFmpeg. Callback này có thể đợi GIL trong luồng giải mã trong khi luồng giao diện giữ GIL và chờ giải mã trong `QMediaPlayer.play()`, làm khóa cả giao diện lẫn tiến độ tác vụ Python. Không phải cứ chờ model lâu là giao diện phải đứng.
+
+Chạy bản source cập nhật bằng `Run.bat`. Khi cần mở lại sau một phiên treo, các câu đã hoàn tất vẫn nằm trong thư viện; vào **Thư viện → Tiếp tục / thử lại** trên bản dịch gián đoạn để chạy phần còn thiếu. Không cần tạo bản dịch mới hoặc xóa dữ liệu. Đường FFmpeg → Qt vẫn được giữ để tránh lỗi CRT stderr từng ảnh hưởng file SQLite; log native không gọi Python. Lỗi phát âm thanh và lỗi dịch vẫn có thông báo riêng trong app.
+
+## Live bỏ sót lời khi điện thoại phát loa ngoài gần mic tai nghe
+
+Đây là đường thu microphone, không phải thu âm thanh hệ thống. Chọn đúng **Headset/Microphone** của tai nghe trong trang Live; tên trình điều khiển nằm sau dấu chấm giữa. Sau bản cập nhật cách nhớ mic, có thể cần chọn lại một lần. Ứng dụng nhớ tên và trình điều khiển, tìm lại số thứ tự ngay trước khi thu; nếu thiết bị cũ không còn kết nối hoặc có nhiều thiết bị trùng tên, phải chọn lại thay vì tự chuyển sang mic khác.
+
+Thử cùng một đoạn 10–15 giây bằng giọng nói trực tiếp gần mic và bằng loa ngoài điện thoại gần mic. Nghe lại âm thanh gốc đã lưu: nếu lời đã bị cắt hoặc im lặng trong WAV thì thay model dịch hay tăng mức suy luận không khôi phục được. Nếu chỉ tiếng từ điện thoại bị mất, kiểm tra bộ lọc tiếng gọi/voice isolation của tai nghe và hiệu ứng microphone của Windows. Có thể thử tắt **Audio enhancements** cho đúng microphone nếu Windows có mục này, rồi so sánh lại; ANC dùng khi nghe không đồng nghĩa với bộ lọc microphone. Hướng dẫn Microsoft: https://support.microsoft.com/en-au/office/disable-audio-enhancements.
+
+Live đo mức thu từ PCM gốc khoảng 3 lần/giây, dùng thang âm lượng để dễ thấy tiếng nhỏ. Khi tín hiệu gần như im lặng, rất nhỏ hoặc bị vỡ kéo dài 8 giây, thanh trạng thái hiện cảnh báo có điều kiện; im lặng khi không ai nói vẫn bình thường. Rê chuột lên mức mic để xem dBFS. Cảnh báo không dừng ghi, không tăng âm, không xóa mẫu và không làm thay đổi âm thanh đã lưu. Thông số mức thu và tên mic nằm trong journal tác vụ để chẩn đoán.
+
+`RawInputStream` chỉ có nghĩa dữ liệu PCM thô ở giao diện thư viện, không bảo đảm bỏ qua xử lý của Windows hoặc firmware tai nghe. Bản sửa không tuyên bố đã tắt các bộ lọc này. Các kết quả ASR chỉ có dấu câu sẽ không tạo hàng chép lời hoặc gửi dịch; các từ ngắn như “一”, “没有。” vẫn được giữ. Ngưỡng VAD và model nhận dạng chưa đổi vì hạ ngưỡng chưa chứng minh cải thiện trên bản ghi lỗi.
+
 ## Microphone nhận diện nhưng đồng hồ vẫn 00:00
 
 Thiết bị chưa trả mẫu âm thanh. Kiểm tra microphone đã kết nối, chế độ đàm thoại của tai nghe Bluetooth, quyền microphone cho ứng dụng desktop trong Windows và chọn đúng thiết bị trong ứng dụng. Thử microphone có dây hoặc microphone tích hợp. Chương trình không lưu một bản ghi rỗng như thành công.

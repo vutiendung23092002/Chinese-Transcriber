@@ -47,6 +47,12 @@ def timestamp(seconds):
     seconds=max(0,int(seconds)); hours,seconds=divmod(seconds,3600); minutes,seconds=divmod(seconds,60)
     return f'{hours:02d}:{minutes:02d}:{seconds:02d}' if hours else f'{minutes:02d}:{seconds:02d}'
 
+
+def waveform_peaks(path,duration,bins=240,cancel=None):
+    """Bounded-memory amplitude envelope for the seek control, decoded off the UI thread."""
+    block=max(512,int(max(1,duration)*16000/bins))
+    return [float(np.max(np.abs(chunk))) for chunk in decoded_chunks(path,block,cancel)]
+
 def atomic_text(path,text):
     path=Path(path); temp=path.with_name(path.name+'.'+__import__('uuid').uuid4().hex+'.tmp')
     try:

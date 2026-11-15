@@ -12,6 +12,8 @@ from .audio import audio_info,export_txt
 from .codex import capabilities,find_codex,translate_version
 
 def validate_runtime(root,wav,with_codex=False):
+    from .multimedia import configure_multimedia_logging
+    configure_multimedia_logging()
     store=Store(root)
     folder=Path(sys.executable).parent/'models' if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[2]/'models'
     models=ModelManager(folder)

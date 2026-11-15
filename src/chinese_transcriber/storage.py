@@ -1,7 +1,7 @@
 """Transactional metadata, content-addressed audio and recoverable deletion."""
 from __future__ import annotations
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -153,7 +153,7 @@ class Store:
             db.execute('INSERT INTO transcripts VALUES(?,?,?,?,?,NULL)',(identifier,audio_id,engine,status,now()))
         return identifier
 
-    def append_segment(self,transcript_id,start,end,text,timing='speech-boundary'):
+    def append_segment(self,transcript_id,start,end,text,timing='speech-boundary',version_id=None):
         text=text.strip()
         if not text: return None
         with self.transaction() as db:
@@ -162,7 +162,18 @@ class Store:
             ordinal=previous['ordinal']+1 if previous else 0
             identifier=uid()
             db.execute('INSERT INTO segments VALUES(?,?,?,?,?,?,?)',(identifier,transcript_id,ordinal,float(start),float(end),text,timing))
+            if version_id:
+                version=db.execute('SELECT transcript_id,deleted FROM versions WHERE id=?',(version_id,)).fetchone()
+                if not version or version['deleted'] or version['transcript_id']!=transcript_id:
+                    raise ValueError('Hàng đợi dịch không thuộc bản chép lời này.')
+                db.execute("INSERT INTO translations(version_id,segment_id,status) VALUES(?,?,'queued')",(version_id,identifier))
         return identifier
+
+    def queue_missing_translations(self,version_id):
+        with self.transaction() as db:
+            db.execute("""INSERT OR IGNORE INTO translations(version_id,segment_id,status)
+                SELECT v.id,s.id,'queued' FROM versions v JOIN segments s ON s.transcript_id=v.transcript_id
+                WHERE v.id=? AND v.deleted IS NULL""",(version_id,))
 
     def set_transcript_status(self,identifier,status):
         with self.transaction() as db:
@@ -203,11 +214,18 @@ class Store:
         with self.transaction() as db:
             db.execute('UPDATE versions SET status=? WHERE id=?',(status,identifier))
 
+    def deletion_stamp(self,db,audio_id):
+        # A deletion group must be distinct even within one Windows clock tick.
+        stamp=now()
+        while db.execute('SELECT 1 FROM versions WHERE audio_id=? AND deleted=?',(audio_id,stamp)).fetchone():
+            stamp=(datetime.fromisoformat(stamp)+timedelta(microseconds=1)).isoformat(timespec='microseconds')
+        return stamp
+
     def trash_version(self,version_id,also_audio=False):
         with self.transaction() as db:
             row=db.execute('SELECT * FROM versions WHERE id=? AND deleted IS NULL',(version_id,)).fetchone()
             if not row: raise ValueError('Không tìm thấy bản dịch đang hoạt động.')
-            stamp=now()
+            stamp=self.deletion_stamp(db,row['audio_id'])
             remaining=db.execute('SELECT COUNT(*) FROM versions WHERE audio_id=? AND deleted IS NULL AND id<>?',(row['audio_id'],version_id)).fetchone()[0]
             if also_audio and remaining: raise ValueError('Âm thanh vẫn được bản dịch khác sử dụng.')
             db.execute('UPDATE versions SET deleted=? WHERE id=?',(stamp,version_id))
@@ -216,7 +234,7 @@ class Store:
 
     def trash_audio(self,audio_id):
         with self.transaction() as db:
-            stamp=now()
+            stamp=self.deletion_stamp(db,audio_id)
             db.execute('UPDATE audio SET deleted=? WHERE id=? AND deleted IS NULL',(stamp,audio_id))
             # Preserve previously trashed versions' own timestamps/group membership.
             db.execute('UPDATE versions SET deleted=? WHERE audio_id=? AND deleted IS NULL',(stamp,audio_id))

@@ -16,12 +16,12 @@ def test_settings_requires_explicit_supported_default_selection(qtbot,tmp_path,m
     window=WorkspaceWindow(store); qtbot.addWidget(window); window.models=MODELS
     errors=[]; window.error=lambda message:errors.append(str(message)); window.navigate('settings')
     page=window.settings_page
-    assert page.model_choice.currentData()==model
-    if model=='gpt-6.1-sol': assert page.effort_choice.currentData()==effort
+    assert page.model_selector.model_id==model
+    assert page.model_selector.effort==effort
     page.save_button.click()
     assert errors and store.setting('model')==model and store.setting('effort')==effort
-    page.model_choice.setCurrentIndex(page.model_choice.findData('gpt-6.1-sol'))
-    page.effort_choice.setCurrentIndex(page.effort_choice.findData('medium'))
+    page.model_selector.select_model('gpt-6.1-sol')
+    page.model_selector.select_effort('medium')
     assert store.setting('effort')==effort
     page.save_button.click()
     assert store.setting('model')=='gpt-6.1-sol' and store.setting('effort')=='medium'

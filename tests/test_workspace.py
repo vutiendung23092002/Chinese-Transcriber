@@ -24,7 +24,7 @@ def test_unsupported_previous_model_is_preserved_without_substitution(qtbot,tmp_
     window=WorkspaceWindow(store); qtbot.addWidget(window)
     window.models=[dict(model='available-model',displayName='Available',supportedReasoningEfforts=[dict(reasoningEffort='low')],defaultReasoningEffort='low')]
     window.navigate('file')
-    assert window.option_widgets[2].currentData()=='removed-model'
+    assert window.model_selector.model_id=='removed-model'
     window.capture_options()
     assert store.setting('model')=='removed-model'
 

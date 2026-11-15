@@ -1,5 +1,9 @@
 @echo off
 cd /d "%~dp0"
+if exist ".venv\Scripts\pythonw.exe" (
+  start "" ".venv\Scripts\pythonw.exe" -m chinese_transcriber.app %*
+  exit /b
+)
 if exist ".tools\python311\pythonw.exe" (
   start "" ".tools\python311\pythonw.exe" -m chinese_transcriber.app %*
   exit /b

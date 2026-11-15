@@ -10,7 +10,8 @@ from PySide6.QtWidgets import (QWidget, QFrame, QVBoxLayout, QHBoxLayout, QGridL
     QDialogButtonBox, QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QLayout, QSizePolicy, QApplication)
 
-from .widgets import label, button, ComboBox
+from .widgets import label, button
+from .model_selector import ModelReasoningSelector
 from .theme import LIGHT, DARK, icon, asset
 from .codex import APPROVED_MODELS, validate_selection
 from .models import CATALOG
@@ -145,6 +146,9 @@ class SettingsPage(QWidget):
             layout=QHBoxLayout(row); layout.setContentsMargins(0,0,4,0); layout.addStretch()
             arrow=label(''); arrow.setPixmap(icon('chevron',self.colors['muted'],14).pixmap(14,14)); arrow.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents); layout.addWidget(arrow)
             b.addWidget(row)
+        refresh=button('Kiểm tra kết nối',self.owner.check_codex)
+        refresh.setObjectName('settings_check_connection'); refresh.setIcon(icon('refresh',self.colors['text'],16))
+        b.addWidget(refresh)
 
     def quota_card(self):
         b=self.new_card('quota',244); self.header(b,'Hạn mức Codex','chart'); b.addStretch()
@@ -179,32 +183,10 @@ class SettingsPage(QWidget):
 
     def defaults_card(self):
         b=self.new_card('defaults',244); self.header(b,'Mô hình dịch mặc định','cube','Áp dụng cho các bản dịch mới.')
-        self.model_choice=ComboBox(); self.model_choice.setObjectName('settings_model')
-        self.effort_choice=ComboBox(); self.effort_choice.setObjectName('settings_effort')
-        previous=self.owner.store.setting('model')
-        display_names={''.join(x for x in name.lower() if x.isalnum()):name for name in APPROVED_MODELS}
-        for item in self.owner.models:
-            normalized=''.join(x for x in item['displayName'].lower() if x.isalnum())
-            self.model_choice.addItem(display_names.get(normalized,item['displayName']),item['model'])
-        index=self.model_choice.findData(previous)
-        if previous and index<0:
-            self.model_choice.addItem(previous+' · Không khả dụng',previous); index=self.model_choice.count()-1; self.model_choice.model().item(index).setEnabled(False)
-        if not self.model_choice.count(): self.model_choice.addItem('Chưa xác minh',None)
-        self.model_choice.setCurrentIndex(max(0,index))
-        def efforts():
-            self.effort_choice.clear(); item=next((x for x in self.owner.models if x['model']==self.model_choice.currentData()),None)
-            if not item: self.effort_choice.addItem('Chưa xác minh',None); return
-            for option in item.get('supportedReasoningEfforts',[]): self.effort_choice.addItem(option['reasoningEffort'],option['reasoningEffort'])
-            selected=self.owner.store.setting('effort',item.get('defaultReasoningEffort')) if self.model_choice.currentData()==previous else item.get('defaultReasoningEffort')
-            choice=self.effort_choice.findData(selected)
-            if selected and choice<0:
-                self.effort_choice.addItem(selected+' · Không khả dụng',selected); choice=self.effort_choice.count()-1; self.effort_choice.model().item(choice).setEnabled(False)
-            self.effort_choice.setCurrentIndex(max(0,choice))
-        self.model_choice.currentIndexChanged.connect(efforts); efforts()
-        fields=QHBoxLayout(); fields.setSpacing(20)
-        for caption,control,stretch in [('Mô hình',self.model_choice,11),('Mức suy luận',self.effort_choice,10)]:
-            column=QVBoxLayout(); column.setSpacing(7); column.addWidget(label(caption)); column.addWidget(control); fields.addLayout(column,stretch)
-        b.addSpacing(8); b.addLayout(fields); b.addStretch(); self.divider(b)
+        self.model_selector=ModelReasoningSelector(self.owner.models,self.owner.store.setting('model'),self.owner.store.setting('effort'),self.colors)
+        self.model_selector.setFixedWidth(260)
+        b.addWidget(self.model_selector,0,Qt.AlignmentFlag.AlignHCenter)
+        b.addStretch(); self.divider(b)
         bottom=QHBoxLayout(); bottom.setSpacing(12)
         count=len(self.owner.models); bottom.addWidget(label(f'{count} mô hình khả dụng' if count else 'Chưa có danh sách','muted'))
         bottom.addWidget(self.link('Xem danh sách',self.show_models)); bottom.addStretch()
@@ -212,7 +194,7 @@ class SettingsPage(QWidget):
 
     def save_defaults(self):
         try:
-            model=self.model_choice.currentData(); effort=self.effort_choice.currentData()
+            model=self.model_selector.model_id; effort=self.model_selector.effort
             validate_selection(self.owner.models,model,effort)
             self.owner.store.set_setting('model',model); self.owner.store.set_setting('effort',effort)
             self.owner.statusBar().showMessage('Đã lưu mô hình và mức suy luận mặc định.')
@@ -343,5 +325,5 @@ class SettingsPage(QWidget):
         dialog,body=self.dialog('Khôi phục tác vụ gián đoạn')
         for job in self.owner.recovered:
             def recover(checked=False,item=job): dialog.accept(); self.owner.recover_job(item)
-            body.addWidget(button({'recording':'Ghi âm','transcribe':'Chép lời','translate':'Dịch'}.get(job['kind'],job['kind'])+' · Phục hồi',recover))
+            body.addWidget(button({'recording':'Ghi âm','transcribe':'Chép lời','translate':'Dịch','transcribe_translate':'Chép lời và dịch'}.get(job['kind'],job['kind'])+' · Phục hồi',recover))
         self.finish_dialog(dialog,body)

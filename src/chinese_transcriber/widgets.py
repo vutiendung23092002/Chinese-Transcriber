@@ -118,9 +118,12 @@ class ComboBox(QComboBox):
         text_width=max((self.fontMetrics().horizontalAdvance(self.itemText(i)) for i in range(self.count())),default=0)
         self.view().setMinimumWidth(max(self.width(),min(420,text_width+48)))
         colors=getattr(self.window(),'colors',LIGHT)
-        if self._popup_colors!=colors:
-            self.view().setStyleSheet(dropdown_popup_stylesheet(colors))
+        file_style=getattr(self.window(),'page',None) in ('file','live')
+        if self._popup_colors!=colors or getattr(self,'_popup_file_style',None)!=file_style:
+            typography='QListView {font-family:"Inter";font-size:15px;font-weight:400;} QListView::item {min-height:24px;padding:8px 12px;}' if file_style else ''
+            self.view().setStyleSheet(dropdown_popup_stylesheet(colors)+typography)
             self._popup_colors=dict(colors)
+            self._popup_file_style=file_style
         super().showPopup()
 
 class Rail(QWidget):

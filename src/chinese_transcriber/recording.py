@@ -11,6 +11,7 @@ import numpy as np
 import sounddevice as sd
 from .storage import uid
 from .asr import Recognizer
+from .microphone import InputSignalMonitor,resolve_input_device
 
 class LiveSession:
     def __init__(self,store,models,notify,device=None,threads=4,translation=None):
@@ -22,6 +23,7 @@ class LiveSession:
         self.translation_cancel=threading.Event(); self.state_lock=threading.RLock(); self.saved=False
         self.capture_queue=queue.Queue(maxsize=256); self.asr_queue=queue.Queue(maxsize=256)
         self.closed=threading.Event(); self.capture_stopped=threading.Event()
+        self.signal_monitor=InputSignalMonitor()
         self.job=store.job('recording',self.identifier,self.payload())
         self.stream=None
 
@@ -29,11 +31,17 @@ class LiveSession:
         with self.state_lock:
             translation={key:self.translation[key] for key in ('model','effort','context','glossary')} if self.translation else None
             return {'path':str(self.path.relative_to(self.store.root)),'sample_rate':16000,'segments':[dict(x) for x in self.segments],
-                'samples':self.samples,'lagged':self.lagged,'translation':translation}
+                'samples':self.samples,'lagged':self.lagged,'translation':translation,
+                'microphone':self.device if isinstance(self.device,dict) else None,'input_signal':self.signal_monitor.stats()}
 
     def start(self):
         try:
-            self.stream=sd.RawInputStream(samplerate=16000,channels=1,dtype='int16',blocksize=1600,device=self.device,callback=self.capture)
+            device=self.device; extra={}
+            if isinstance(device,dict):
+                selected=resolve_input_device(device); device=selected['index']
+                if selected['hostapi']=='Windows WASAPI':
+                    extra['extra_settings']=sd.WasapiSettings(auto_convert=True)
+            self.stream=sd.RawInputStream(samplerate=16000,channels=1,dtype='int16',blocksize=1600,device=device,callback=self.capture,**extra)
             self.writer=threading.Thread(target=self.write,name='recording-writer',daemon=True)
             self.decoder=threading.Thread(target=self.decode,name='live-asr',daemon=True)
             self.writer.start(); self.decoder.start(); self.stream.start()
@@ -67,22 +75,26 @@ class LiveSession:
                             self.notify(dict(type='warning',message='Microphone chưa trả dữ liệu. Kiểm tra tai nghe Bluetooth hoặc chọn thiết bị khác.')); warned=True
                         continue
                     if data is None:
+                        self.signal_monitor.reset_window()
                         if not self.lagged:
                             try: self.asr_queue.put(None,timeout=.5)
                             except queue.Full: self.lagged=True
                         continue
                     output.write(data); self.samples+=len(data)//2
+                    values=np.frombuffer(data,dtype='<i2').astype('float32')/32768
+                    measurement=self.signal_monitor.feed(values)
+                    if measurement:
+                        warning=measurement.pop('warning')
+                        self.notify(dict(type='level',seconds=self.samples/16000,**measurement))
+                        if warning: self.notify(dict(type='warning',message=warning))
                     if not self.lagged:
-                        try: self.asr_queue.put_nowait(np.frombuffer(data,dtype='<i2').astype('float32')/32768)
+                        try: self.asr_queue.put_nowait(values)
                         except queue.Full:
                             self.lagged=True
                             self.notify(dict(type='warning',message='ASR đang chậm. Âm thanh vẫn đang lưu; có thể chép lời lại toàn bộ sau khi dừng.'))
                     if time.monotonic()-last>=1:
                         output.flush(); os.fsync(output.fileno()); last=time.monotonic()
                         self.store.job('recording',self.identifier,self.payload(),self.job)
-                        values=np.frombuffer(data,dtype='<i2').astype('float32')/32768
-                        level=int(min(100,np.sqrt(np.mean(values*values))*250)) if len(values) else 0
-                        self.notify(dict(type='level',seconds=self.samples/16000,level=level))
                 output.flush(); os.fsync(output.fileno())
         except Exception as error:
             self.error=str(error); self.notify(dict(type='warning',message='Lỗi ghi file: '+self.error))
@@ -187,6 +199,7 @@ def materialize_recording(store,payload,job_id,error=''):
         for identifier,segment in mapping:
             if segment.get('translation_status')=='complete': store.translation_result(version,identifier,segment['vi'],segment.get('note',''))
         store.set_version_status(version,'complete' if all(x.get('translation_status')=='complete' for _,x in mapping) else 'partial')
-    store.job('recording',audio['id'],dict(audio_id=audio['id'],transcript_id=transcript),job_id,'complete',error)
+    store.job('recording',audio['id'],dict(audio_id=audio['id'],transcript_id=transcript,
+        microphone=payload.get('microphone'),input_signal=payload.get('input_signal')),job_id,'complete',error)
     pcm.unlink(missing_ok=True); wav.unlink(missing_ok=True)
     return dict(audio_id=audio['id'],transcript_id=transcript,version_id=version,warning=error or ('Cần chép lời lại từ file đã lưu để lấy đầy đủ nội dung.' if payload.get('lagged') else ''))
