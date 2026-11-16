@@ -4,7 +4,9 @@
 
 > **Bản thử nghiệm — Live/thu âm trực tiếp chưa hoàn thiện.** Ưu tiên sử dụng dịch file âm thanh; phần Live chưa được nghiệm thu đầy đủ với microphone thực.
 
-[Tải bản Windows x64 tại GitHub Releases](https://github.com/vutiendung23092002/Chinese-Transcriber/releases). Chọn file ZIP trong **Assets**, giải nén toàn bộ rồi chạy ứng dụng. Ghi chú bản hiện tại: [1.0.0 Preview 1](docs/RELEASE_NOTES_v1.0.0-preview.1.md).
+[Tải bản Windows x64 tại GitHub Releases](https://github.com/vutiendung23092002/Chinese-Transcriber/releases). Trong **Assets** có bộ cài MSI và gói ZIP portable. Ghi chú bản hiện tại: [1.0.0 Preview 1](docs/RELEASE_NOTES_v1.0.0-preview.1.md).
+
+Có thêm bộ cài thử nghiệm **`ChineseTranscriber-1.0.0-preview.1-win-x64.msi`** trong Assets. Mở MSI, đợi cài đặt xong rồi mở **Chinese Transcriber** từ Start Menu. Bộ cài dành cho người dùng hiện tại, kèm đầy đủ runtime và model; không cần cài Python riêng. Lối tắt dùng launcher Python chính thức đi kèm, đã kiểm tra chạy được trên máy thử nghiệm khi Smart App Control đang bật. MSI chưa ký số nên vẫn có thể bị chính sách Windows trên máy khác chặn.
 
 ## Chạy ứng dụng
 

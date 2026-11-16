@@ -2,6 +2,12 @@
 
 Ngày 14/11/2026. Windows 11 x64, Intel Core i7-12700F (20 logical CPU), RAM 31,8 GiB. Python 3.11.9, Qt/PySide6 6.12.0, sherpa-onnx 1.13.8. ASR giới hạn 4 luồng CPU, VAD 1 luồng; không CUDA, Docker hoặc WSL.
 
+## Bộ cài MSI — 16/11/2026
+
+MSI thử nghiệm được tạo từ ZIP portable đã có bản sửa Live (source 80567cb), gồm 1.222 file. Kiểm tra tích hợp dùng thư mục cài và Start Menu riêng trong workspace: cài exit 0; hash của mọi file trong manifest khớp, tất cả file của ZIP có mặt; lối tắt trỏ đúng runtime Python đã cài và `launch.py`; launcher khởi động/thoát exit 0 và SQLite integrity ok. Đường dẫn mặc định `%LOCALAPPDATA%\Programs\ChineseTranscriber` được xác minh riêng bằng bước tính chi phí của Windows Installer, không cài vào profile thật.
+
+Gỡ cài đặt exit 0; Windows Installer không còn đăng ký sản phẩm, lối tắt và EXE ứng dụng đã được xóa. File ngoài bộ cài đặt bên trong thư mục cài và thư viện dữ liệu thử nghiệm bên ngoài đều còn nguyên. Smart App Control ở trạng thái On; EXE PyInstaller riêng vẫn bị chặn 4551 sau khi cài, trong khi launcher chạy được. MSI chưa ký số. Report tại `.test-data/installer/validation.json`; không đánh đồng kiểm tra launcher với việc EXE đã vượt chính sách Windows.
+
 ## Sửa cửa sổ nháy khi mở Live — 16/11/2026
 
 Commit 80567cb sửa đường phân cách được bật hiển thị trước khi có parent, khiến Qt tạo một cửa sổ QFrame 1×480 px rồi lập tức gắn lại vào panel. Ca hồi quy ghi nhận tám cửa sổ thừa trước khi sửa; sau khi tạo QFrame với parent là panel điều khiển, ca kiểm tra đạt trên Qt offscreen và backend Qt Windows. Toàn bộ 78 test source đạt trong 42,79 giây; 224 lượt kiểm tra bố cục/scale đạt. Launcher Python trong gói được kiểm tra thêm qua sáu lượt chuyển trang/theme/kích thước, không có cửa sổ thừa.

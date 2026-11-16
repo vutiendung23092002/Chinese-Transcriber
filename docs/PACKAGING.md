@@ -46,3 +46,20 @@ Chạy `python scripts/verify_release.py` sau build. Script dùng thư viện ri
 Có thể chạy self-test thủ công: `ChineseTranscriber.exe --self-test-audio "duong-dan.wav" --self-test-codex --data-dir "thu-vien-kiem-tra-rieng"`. Tùy chọn Codex sử dụng hạn mức tài khoản thật, không tự chạy khi mở ứng dụng bình thường. Kết quả ghi trong selftest-report.json của thư viện kiểm tra.
 
 `python scripts/verify_release.py --portable-python` kiểm tra Python launcher **trong gói** từ working directory khác; `--source` kiểm tra source workspace. Hai chế độ này không được dùng để báo rằng EXE PyInstaller đã vượt Smart App Control.
+
+## Bộ cài MSI thử nghiệm
+
+MSI được tạo từ ZIP portable và checksum đã chuẩn bị bằng Windows Python 3.11 hoặc 3.12. Script dùng `msilib` trong thư viện chuẩn; Python 3.13 trở lên đã bỏ module này. Đây là yêu cầu của bước build, không phải yêu cầu với người cài ứng dụng.
+
+```powershell
+python scripts/build_installer.py
+python scripts/verify_installer.py
+```
+
+Đầu ra: `dist/ChineseTranscriber-1.0.0-preview.1-win-x64.msi`, file `.msi.sha256` và `.build-info.json`. MSI kèm đúng 1.222 file của ZIP portable, kể cả runtime, model, font và giấy phép; không cần tải thêm khi cài. Bộ cài không kèm Codex CLI hoặc thông tin tài khoản.
+
+MSI dùng giao diện tiến trình cơ bản của Windows Installer và cài theo profile người dùng hiện tại, mặc định tại `%LOCALAPPDATA%\Programs\ChineseTranscriber`. Lối tắt Start Menu trỏ tới `python/pythonw.exe` với `launch.py`; không chạy EXE PyInstaller đang bị chặn. Sản phẩm có mục gỡ trong Installed apps. Component có key path ở HKCU; đường dẫn cài và Start Menu được ghi nhớ cho repair/uninstall. File ngoài bộ cài được giữ lại; thư viện `%LOCALAPPDATA%\ChineseTranscriber` nằm ngoài thư mục cài.
+
+Đã kiểm tra cài/gỡ (exit 0), đối chiếu đủ 1.222 file, lối tắt, khởi động launcher đã cài và SQLite integrity; kiểm tra đường dẫn mặc định mà không cài vào profile thật. Sau khi gỡ, sản phẩm/lối tắt/file ứng dụng được xóa, file người dùng và thư viện thử nghiệm vẫn còn. Script kiểm tra từ chối thao tác nếu sản phẩm hoặc đường dẫn installer đã tồn tại; mọi cài/gỡ thử đều dùng thư mục riêng trong `.test-data/installer`.
+
+Smart App Control vẫn On trong lần kiểm tra. EXE PyInstaller đã cài vẫn bị chặn 4551; launcher trong gói chạy thành công. MSI chưa ký số, nên đây không phải bảo đảm rằng các chính sách Windows khác sẽ cho phép cài/chạy. Báo cáo tại `.test-data/installer/validation.json`.

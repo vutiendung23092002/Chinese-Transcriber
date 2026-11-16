@@ -13,6 +13,19 @@ Bản Windows x64 cập nhật ngày 16/11/2026. Mã nguồn đúng bản ZIP n�
 
 ## Tải và chạy
 
+### Bộ cài MSI thử nghiệm
+
+1. Tải **`ChineseTranscriber-1.0.0-preview.1-win-x64.msi`** trong Assets rồi mở file.
+2. Đợi Windows Installer hoàn tất. Bộ cài dùng giao diện tiến trình cơ bản và tự cài cho người dùng hiện tại tại `%LOCALAPPDATA%\Programs\ChineseTranscriber`.
+3. Mở **Chinese Transcriber** từ Start Menu. Lối tắt dùng runtime Python chính thức đi kèm để chạy ứng dụng; không cần cài Python riêng.
+4. Có thể gỡ từ **Settings → Apps → Installed apps**. Bộ cài không quản lý thư viện dữ liệu mặc định tại `%LOCALAPPDATA%\ChineseTranscriber`; dữ liệu đó được giữ lại khi gỡ.
+
+Đã kiểm tra cài đặt và gỡ cài đặt thành công trên Windows 11 x64 khi Smart App Control ở trạng thái On; đối chiếu đủ 1.222 file, lối tắt Start Menu, khởi động launcher và SQLite integrity. Sau khi gỡ, sản phẩm/lối tắt/file ứng dụng đã được xóa, file ngoài bộ cài và thư viện thử nghiệm được giữ lại.
+
+**MSI chưa có chữ ký số và không bảo đảm chạy trên mọi máy.** EXE PyInstaller riêng vẫn bị Application Control chặn 4551 sau khi cài trên máy kiểm tra; lối tắt Start Menu dùng launcher đi kèm đã được kiểm tra chạy thành công.
+
+### Gói ZIP portable
+
 1. Trong **Assets**, tải `ChineseTranscriber-1.0.0-win-x64.zip`.
 2. Giải nén toàn bộ ZIP; giữ nguyên các thư mục đi kèm.
 3. Mở `ChineseTranscriber.exe`. Gói có thêm `Run.bat` dùng runtime Python chính thức đi kèm.
@@ -20,7 +33,7 @@ Bản Windows x64 cập nhật ngày 16/11/2026. Mã nguồn đúng bản ZIP n�
 
 Gói đã kèm Qt, FFmpeg, font và ba model SenseVoiceSmall INT8, Streaming Paraformer INT8, Silero VAD. Chép lời chạy cục bộ bằng CPU; không cần cài thêm Python, Docker, WSL hoặc CUDA.
 
-File `.zip.sha256` trong Assets dùng để kiểm tra ZIP sau khi tải, không bắt buộc để chạy ứng dụng.
+Các file `.sha256` trong Assets dùng để kiểm tra ZIP hoặc MSI sau khi tải, không bắt buộc để chạy ứng dụng.
 
 ## Đã kiểm tra
 
