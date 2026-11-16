@@ -54,4 +54,4 @@ Không xóa recordings/ khi chưa phục hồi. Dọn dung lượng hoặc chọ
 
 ## Portable
 
-Giải nén toàn bộ folder và mở **Run.bat**. Không kéo riêng launcher hoặc EXE ra khỏi các thư mục đi kèm. Artifact EXE cuối bị Smart App Control chặn do yêu cầu chữ ký; gói có launcher đã kiểm tra chạy source bằng runtime Python PSF chính thức có chữ ký, không cần cài Python. Không thay đổi chính sách bảo vệ Windows. Xem PACKAGING.md để phân biệt các kết quả kiểm thử của EXE và Python launcher.
+Giải nén toàn bộ folder và mở **ChineseTranscriber.exe** hoặc **Run.bat**. Không kéo riêng launcher hoặc EXE ra khỏi các thư mục đi kèm. EXE build ngày 16/11/2026 đã chạy trực tiếp trên máy kiểm tra. Nếu Windows báo chặn file theo chữ ký, gói có launcher chạy source bằng runtime Python PSF chính thức có chữ ký, không cần cài Python. Không thay đổi chính sách bảo vệ Windows. Xem PACKAGING.md để phân biệt các kết quả kiểm thử của EXE và Python launcher.

@@ -24,9 +24,9 @@ Giữ nguyên cả thư mục khi chuyển máy. Có thể zip nguyên thư mụ
 
 ## Tình trạng Smart App Control và launcher Python
 
-Một bản EXE trước chạy đầy đủ smoke/ASR/Codex/codec, report .test-data/prior-frozen/validation.json. Artifact EXE cuối sau sửa bảo vệ thuật ngữ chưa lưu bị Smart App Control chặn với WinError 4551, Code Integrity event 3077/3033; report .test-data/release/validation.json không đạt bước khởi động. Chưa xác định được nguyên nhân policy đánh giá khác nhau giữa các build. Không vô hiệu hóa kiểm soát hoặc thêm chứng thư vào Windows. EXE hiện chưa có chữ ký nhà phát hành và cần xử lý yêu cầu chữ ký/phê duyệt theo chính sách máy trước khi nghiệm thu đường chạy EXE.
+Bản EXE mới build ngày 16/11/2026 từ commit 9fa392c đã chạy đầy đủ smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite, report .test-data/release/validation.json. SHA-256 EXE: bbc7e759b372eee933f8d23801c4a7814c7c495382f51c8d821ca01cd5a38540. Bản này khởi động được trên máy kiểm tra mà không thay đổi chính sách Windows hoặc thêm chứng thư. Một artifact ngày 14/11 từng bị Smart App Control chặn với WinError 4551; chưa xác định được vì sao policy đánh giá khác nhau giữa các build. EXE mới vẫn chưa có chữ ký Authenticode của nhà phát hành.
 
-Gói bàn giao có **Run.bat**, `python/` (runtime PSF chính thức có chữ ký), `src/` và `assets/`. Đây là cách khởi động đã kiểm tra cho gói cuối. Launcher chạy source bằng Python chính thức và dùng dependency native từ _internal, không chạy EXE đang bị chặn. Không cần cài Python lên máy; vẫn là cùng ứng dụng PySide6 native. Giữ nguyên toàn bộ thư mục để launcher tìm đúng dependency và model.
+Gói bàn giao có thêm **Run.bat**, `python/` (runtime PSF chính thức có chữ ký), `src/` và `assets/`. Launcher chạy source bằng Python chính thức và dùng dependency native từ _internal. Không cần cài Python lên máy; vẫn là cùng ứng dụng PySide6 native. Có thể mở trực tiếp ChineseTranscriber.exe; giữ nguyên toàn bộ thư mục để chương trình tìm đúng dependency và model.
 
 Sau build, `python scripts/prepare_python_fallback.py` thêm launcher khi workspace có runtime PSF embeddable tại .tools/python311; build_windows.ps1 tự thực hiện bước này nếu có. Không dùng Python uv đang bị policy chặn. Chạy lại prepare_distribution.py sau cùng để checksum bao gồm launcher.
 

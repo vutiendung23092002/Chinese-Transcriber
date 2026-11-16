@@ -2,11 +2,15 @@
 
 Ứng dụng Windows native Python + PySide6: chép lời tiếng Trung bằng CPU, dịch tiếng Việt qua Codex CLI, quản lý nguồn âm thanh và nhiều phiên bản dịch. Phase 2 triển khai theo thiết kế Pastel Light đã duyệt. Có Light/Dark; giữ sidebar capsule và hai cột trái cố định theo kích thước cửa sổ, không cuộn giữa hoặc đổi độ rộng khi chuyển tab.
 
+> **Bản thử nghiệm — Live/thu âm trực tiếp chưa hoàn thiện.** Ưu tiên sử dụng dịch file âm thanh; phần Live chưa được nghiệm thu đầy đủ với microphone thực.
+
+[Tải bản Windows x64 tại GitHub Releases](https://github.com/vutiendung23092002/Chinese-Transcriber/releases). Chọn file ZIP trong **Assets**, giải nén toàn bộ rồi chạy ứng dụng. Ghi chú bản hiện tại: [1.0.0 Preview 1](docs/RELEASE_NOTES_v1.0.0-preview.1.md).
+
 ## Chạy ứng dụng
 
-Mở **Run.bat** tại thư mục dự án, hoặc **Run.bat trong gói dist/ChineseTranscriber**. Gói đầy đủ kèm Python chính thức, Qt, FFmpeg và ba model INT8/VAD; giữ nguyên cả thư mục. Không cần cài Python, Docker, WSL hay GPU NVIDIA.
+Mở **ChineseTranscriber.exe** trong gói phát hành, hoặc **Run.bat** tại thư mục dự án/gói dist/ChineseTranscriber. Gói đầy đủ kèm Python chính thức, Qt, FFmpeg và ba model INT8/VAD; giữ nguyên cả thư mục. Không cần cài Python, Docker, WSL hay GPU NVIDIA.
 
-Gói có **ChineseTranscriber.exe** do PyInstaller tạo, nhưng artifact cuối bị Smart App Control trên máy này chặn vì yêu cầu chữ ký. **Dùng Run.bat**: launcher dùng Python PSF có chữ ký chạy source native đi kèm và đã kiểm tra độc lập. Không thay đổi chính sách Windows. Xem chi tiết tại [PACKAGING](docs/PACKAGING.md).
+EXE build ngày 16/11/2026 đã chạy trực tiếp trên máy kiểm tra. EXE chưa có chữ ký Authenticode; Smart App Control trên máy khác vẫn có thể chặn. Gói có thêm **Run.bat**: launcher dùng Python PSF có chữ ký chạy source native đi kèm. Không thay đổi chính sách Windows. Xem chi tiết tại [PACKAGING](docs/PACKAGING.md).
 
 Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--portable` lưu trong `data` cạnh EXE; `--data-dir "D:\ThuVien"` chọn nơi khác. Codex CLI và đăng nhập ChatGPT dùng cài đặt hiện có trên máy; tài khoản/token không nằm trong gói portable.
 
@@ -25,7 +29,7 @@ Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--p
 
 ## Kết quả xác minh và giới hạn
 
-Python launcher trong gói đã chạy ASR → Codex thật → hai TXT; Qt giải mã WAV/MP3/M4A, SQLite integrity và nguồn dùng chung đều đạt. Bộ kiểm tra source hiện có 77 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Các màn File, Ghi âm, Thư viện, Thuật ngữ và Cài đặt triển khai theo ảnh đã duyệt; danh sách model và số nấc suy luận lấy từ Codex thật. Một bản EXE trước đã qua luồng ASR/dịch; EXE hiện chưa thể nghiệm thu chạy vì Smart App Control chặn, không đánh đồng với kết quả Python launcher.
+Bản EXE build ngày 16/11/2026 đã khởi động và chạy ASR → Codex thật → hai TXT; Qt giải mã WAV/MP3/M4A, SQLite integrity và nguồn dùng chung đều đạt. Bộ kiểm tra source hiện có 77 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Các màn File, Ghi âm, Thư viện, Thuật ngữ và Cài đặt triển khai theo ảnh đã duyệt; danh sách model và số nấc suy luận lấy từ Codex thật. Gói vẫn có Python launcher để dùng khi cần.
 
 Microphone Bluetooth soundcore R60i NC trên máy phát triển được nhận diện nhưng cả PortAudio và Qt trả **0 mẫu âm thanh**. Pipeline live đã qua kiểm tra bằng WAV tiếng Trung chính thức đưa vào đầu vào capture, dùng ASR/Codex thật; chưa xác nhận thu giọng nói trực tiếp trên thiết bị này. Ứng dụng báo chờ dữ liệu và không báo thành công với bản ghi rỗng.
 

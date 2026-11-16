@@ -11,7 +11,7 @@ Người dùng đã phê duyệt Pastel Light và cho phép triển khai ứng d
 | 3. Speech-to-text | File SenseVoice/VAD; live Paraformer interim + SenseVoice final; journal thu liên tục | ASR thật và WAV replay qua capture đạt; benchmark cả hai model trên cùng fixture. Micro Bluetooth hiện có trả 0 frame; nghiệm thu thu giọng nói vật lý còn chờ thiết bị có tín hiệu |
 | 4. Translation | Codex app-server thật, kiểm tra model/effort, context/glossary, JSON/ID, retry/cancel, quota khi khả dụng | CLI đã cài trả đủ 8 model; dịch thật thành công; JSON sai/thiếu/trùng bị từ chối; không thay model ngầm |
 | 5. Integration | Timeline cùng hàng, playback/tua/tốc độ, hiệu đính tạo bản mới, TXT, so sánh, phục hồi | Luồng thật từ WAV đến hai TXT đạt; lỗi ASR không mất PCM, lỗi dịch không mất đoạn xong; tổng 24 test đạt |
-| 6. Distribution | EXE PyInstaller đã build; gói portable có model/font/FFmpeg, hướng dẫn/checksum và launcher Python PSF | Run.bat trong gói cuối đạt smoke/ASR/Codex/WAV-MP3-M4A/SQLite. Một EXE trước đạt, nhưng EXE cuối chưa nghiệm thu chạy vì Smart App Control chặn chữ ký (4551) |
+| 6. Distribution | EXE PyInstaller build lại ngày 16/11/2026; gói portable có model/font/FFmpeg, hướng dẫn/checksum và launcher Python PSF | EXE mới đạt smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite trên máy kiểm tra; bộ source hiện có 77 test đạt |
 
 Mã thực thi nằm tại src/chinese_transcriber. Không nhúng QtWebEngine, trình duyệt hoặc Electron. Các màn hình Phase 1 chỉ còn là tài liệu tham chiếu đã duyệt, không dùng làm runtime.
 
@@ -28,4 +28,4 @@ Python portable do uv cung cấp bị Windows Application Control chặn DLL chu
 
 ## Giới hạn nghiệm thu
 
-Triển khai sáu mốc đã có mã và gói chạy qua Python launcher. Nghiệm thu EXE cuối còn vướng chữ ký theo Smart App Control; chưa xác minh microphone vật lý có tín hiệu trên soundcore R60i NC, chưa benchmark trên Ryzen đích, chưa có CER/WER bài giảng gán nhãn. Timestamp là VAD/sample ở cấp đoạn; chưa forced alignment từng từ hoặc diarization. Chi tiết và bằng chứng tại VALIDATION.md, ASR_BENCHMARK.json và các report riêng trong .test-data. Không đánh đồng các giới hạn này với kiểm thử đã đạt.
+Triển khai sáu mốc đã có mã và gói chạy qua EXE mới lẫn Python launcher. Bản EXE ngày 16/11 đã chạy trên máy kiểm tra, chưa có chữ ký Authenticode của nhà phát hành. Chưa xác minh microphone vật lý có tín hiệu trên soundcore R60i NC, chưa benchmark trên Ryzen đích, chưa có CER/WER bài giảng gán nhãn. Timestamp là VAD/sample ở cấp đoạn; chưa forced alignment từng từ hoặc diarization. Chi tiết và bằng chứng tại VALIDATION.md, ASR_BENCHMARK.json và các report riêng trong .test-data. Không đánh đồng các giới hạn này với kiểm thử đã đạt.

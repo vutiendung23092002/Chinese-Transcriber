@@ -2,6 +2,12 @@
 
 Ngày 14/11/2026. Windows 11 x64, Intel Core i7-12700F (20 logical CPU), RAM 31,8 GiB. Python 3.11.9, Qt/PySide6 6.12.0, sherpa-onnx 1.13.8. ASR giới hạn 4 luồng CPU, VAD 1 luồng; không CUDA, Docker hoặc WSL.
 
+## Build lại EXE — 16/11/2026
+
+Build từ commit 9fa392c bằng PyInstaller 6.22.3 và Python PSF 3.11.9. EXE mới có các màn giao diện hiện tại và SVG dropdown; smoke exit 0. Kiểm tra trực tiếp EXE đóng gói qua WAV, MP3, M4A đều có ASR thật, Qt decode 89.472 mẫu, không lỗi codec và SQLite integrity ok. WAV gọi Codex thật, kiểm tra ID JSON, xuất hai TXT và giữ nguồn sau trash/restore. Report .test-data/release/validation.json ghi frozen=true, source_mode=false và portable_python=false. SHA-256 EXE: bbc7e759b372eee933f8d23801c4a7814c7c495382f51c8d821ca01cd5a38540.
+
+Chạy lại toàn bộ bộ kiểm thử: 77 test đạt trong 35,53 giây. Không thay đổi chính sách Windows hoặc chữ ký để chạy bản EXE này. Thông tin bản build kèm trong BUILD-INFO.json của gói portable.
+
 ## Chép lời file và dịch song song — 15/11/2026
 
 Toàn bộ **77 test đạt** (`pytest -q`, 28,96 giây), bố cục 224 lượt vẫn đạt. Nút chính File đổi thành **Chép lời và dịch** khi có danh sách model Codex; khi chưa kết nối vẫn có đường chép lời cục bộ. Nút dịch riêng giữ chức năng tạo bản dịch khác từ transcript có sẵn.
@@ -74,7 +80,7 @@ Kiểm tra bố cục native qua 7 trang, 4 kích thước cửa sổ 1440×900 
 - Codex CLI 0.169.0-alpha.11.1: đã đăng nhập ChatGPT, model/list trả đủ 8 model đã yêu cầu và supportedReasoningEfforts. account/rateLimits/read cung cấp cửa sổ 300 và 10080 phút. UI đọc dữ liệu thật, không tạo giá trị khi thiếu.
 - Live: WAV Mandarin đưa vào ranh giới adapter microphone, phía sau dùng capture queue/journal/Streaming Paraformer/Silero/SenseVoice/Codex thật. Có interim, final, bản Việt và WAV đã lưu; mọi event dịch đến sau final tương ứng. Chỉ phần thiết bị đầu vào được thay trong script kiểm tra, không thay recognizer/translator.
 - EXE đóng gói đầu: smoke exit 0; ASR/Codex/TXT/restore/SQLite integrity đạt; Qt QAudioDecoder tạo 89.472 mẫu từ fixture WAV, không lỗi codec. Report tại .test-data/frozen-selftest/selftest-report.json.
-- Một bản EXE trước (SHA-256 e9d2253b839588f548acf818da016e59ddb6dcca13dd54eb28d7615975f074b9) đã chạy smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite thành công. Report giữ tại .test-data/prior-frozen/validation.json. Sau sửa bảo vệ thay đổi thuật ngữ chưa lưu, artifact EXE cuối bị Smart App Control chặn (WinError 4551); report .test-data/release/validation.json ghi rõ chưa chạy được. Code Integrity 3077/3033 cho thấy yêu cầu chữ ký. Không sửa chính sách Windows, không thêm chứng thư tự ký; chưa xác định được vì sao policy đánh giá khác nhau giữa các build. Kết quả artifact trước không được coi là nghiệm thu EXE cuối.
+- Ở mốc ngày 14/11, một bản EXE (SHA-256 e9d2253b839588f548acf818da016e59ddb6dcca13dd54eb28d7615975f074b9) chạy smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite thành công; report giữ tại .test-data/prior-frozen/validation.json. Một artifact sau đó bị Smart App Control chặn (WinError 4551), Code Integrity 3077/3033 cho thấy yêu cầu chữ ký. Không sửa chính sách Windows, không thêm chứng thư tự ký; chưa xác định được vì sao policy đánh giá khác nhau giữa các build. Kết quả bản EXE ngày 16/11 được ghi riêng ở đầu báo cáo.
 - Runtime Python PSF có chữ ký chạy source cuối: WAV/MP3/M4A đều có ASR và Qt decode hơn 89 nghìn mẫu; WAV gọi Codex và xuất hai TXT thành công. Gói có Run.bat cùng runtime Python riêng; kết quả kiểm tra gói này tại .test-data/portable-python/validation.json, khác với kiểm tra EXE PyInstaller.
 
 Các kết quả kiểm tra dùng thư viện riêng trong .test-data, không lấy âm thanh cá nhân. Không đưa thông tin tài khoản Codex, fixture WAV hoặc kết quả thử vào gói portable.
