@@ -1,5 +1,4 @@
-.design-tools/node_modules/
-.design-tools/browser-profile/
+.design-tools/
 assets/mockups/qa-report.json
 .venv/
 .tools/
