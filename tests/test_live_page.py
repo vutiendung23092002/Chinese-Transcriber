@@ -2,9 +2,9 @@ import threading
 from types import SimpleNamespace
 import numpy as np
 import pytest
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QObject, QEvent
 from PySide6.QtGui import QFontInfo
-from PySide6.QtWidgets import QLabel, QAbstractSlider
+from PySide6.QtWidgets import QLabel, QAbstractSlider, QWidget
 from chinese_transcriber.storage import Store
 from chinese_transcriber.workspace import WorkspaceWindow
 from chinese_transcriber.recording import materialize_recording
@@ -20,6 +20,32 @@ def live_window(qtbot,tmp_path,monkeypatch):
     if window.record_timer: window.record_timer.stop()
     window.recording=None
     window.pool.waitForDone()
+
+
+def test_entering_live_does_not_flash_an_extra_window(live_window,qtbot,qapp):
+    window=live_window
+    shown=[]
+
+    class WindowShows(QObject):
+        def eventFilter(self,widget,event):
+            if event.type()==QEvent.Type.Show and isinstance(widget,QWidget):
+                if widget.isWindow() and widget is not window:
+                    shown.append((widget.metaObject().className(),widget.size().width(),widget.size().height()))
+            return False
+
+    observer=WindowShows()
+    qapp.installEventFilter(observer)
+    try:
+        for mode in (0,1):
+            window.change_theme(mode)
+            for width,height in ((1440,900),(1024,700),(1440,900)):
+                window.resize(width,height)
+                window.navigate('dashboard')
+                window.navigate('live')
+                qtbot.wait(10)
+        assert shown==[]
+    finally:
+        qapp.removeEventFilter(observer)
 
 
 def test_live_layout_typography_and_responsive_transport(live_window,qtbot):

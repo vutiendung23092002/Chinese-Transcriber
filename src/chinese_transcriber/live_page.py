@@ -92,7 +92,7 @@ class LivePage(QFrame):
         self.meter = MicrophoneMeter(c)
         self.separators = []
         for _ in range(2):
-            line = QFrame(); line.setFixedWidth(1); line.setStyleSheet(f"background:{c['line']};border:0")
+            line = QFrame(self.transport); line.setFixedWidth(1); line.setStyleSheet(f"background:{c['line']};border:0")
             self.separators.append(line)
         self.actions = QWidget()
         action_row = QHBoxLayout(self.actions); action_row.setContentsMargins(0,0,0,0); action_row.setSpacing(10)
