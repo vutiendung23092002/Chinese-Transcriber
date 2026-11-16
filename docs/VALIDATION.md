@@ -2,6 +2,16 @@
 
 Ngày 14/11/2026. Windows 11 x64, Intel Core i7-12700F (20 logical CPU), RAM 31,8 GiB. Python 3.11.9, Qt/PySide6 6.12.0, sherpa-onnx 1.13.8. ASR giới hạn 4 luồng CPU, VAD 1 luồng; không CUDA, Docker hoặc WSL.
 
+## Build lại hai chế độ dịch và bỏ viền focus — 16/11/2026
+
+Mã ứng dụng ở commit `e12403f` chứa toggle hai chế độ, bỏ nút phụ và viền focus khi chọn model/bấm toggle; bàn phím vẫn dùng được. 90 test source đạt trong 25,79 giây; 224 lượt kiểm tra bố cục/scale đạt. Đã xem ảnh điều khiển đang focus ở hai theme và ảnh giao diện từ runtime portable mới.
+
+PyInstaller build mới có SHA-256 EXE `977971dcf28825128dd0b032d83b331e15e88b4711a15b0f05c69d6d06429f8f`. Trích bytecode từ chính EXE, đối chiếu cả module codex, file_page, model_selector, pipeline, storage, workspace và live_page đều khớp source; WinError 4551 vẫn chặn bước khởi động EXE trong lần kiểm tra này. Smart App Control ở trạng thái On; không thay đổi chính sách bảo mật.
+
+Launcher Python trong thư mục portable mới chạy smoke exit 0; WAV, MP3, M4A qua ASR thật và Qt decode hơn 89 nghìn mẫu; WAV gọi Codex thật, kiểm tra ID, xuất Trung/Việt TXT và giữ nguồn dùng chung, SQLite integrity ok. Một lượt thử khác chạy chính module/source/model đã đóng gói ở chế độ `whole`: ASR chốt 3 đoạn rồi đúng một lượt Codex dịch đủ 3; xác minh toggle và nút phụ đã bỏ. Report `.test-data/release-refresh-20261116/frozen-code.json`, `.test-data/release/validation.json`, `.test-data/portable-python/validation.json`, `.test-data/release-refresh-20261116/portable/validation.json`. Kiểm tra launcher không thay thế kiểm tra EXE bị chặn.
+
+ZIP mới SHA-256 `32b8238b7ea147f3d868fd1fab8244e49a0f0863b5acb87ffd283176f0d8d870`, MSI mới SHA-256 `716c43670a5c4dc1bd57d660c94eb64c2b3e67c535473a6192966321ccc21c60`. MSI chứa cùng 1.220 file của ZIP; manifest và checksum từng file được kiểm tra khi build. Chu kỳ cài/gỡ trực tiếp của đợt này được bỏ qua vì máy đã có sản phẩm MSI đang cài. Thay vào đó, xác minh bảng/định nghĩa lối tắt và dùng `/a` của Windows Installer trích xuất trong thư mục test: exit 0, đối chiếu toàn bộ hash; launcher trích xuất chạy exit 0 và SQLite integrity ok. Đối chiếu lại trạng thái sản phẩm cũ, đường dẫn đăng ký và SHA-256 EXE đang cài đều giữ nguyên; sản phẩm thử không được đăng ký. Report `.test-data/release-refresh-20261116/msi-validation.json`. Không coi trích xuất quản trị là nghiệm thu lại quy trình cài/nâng cấp/gỡ trên máy mới.
+
 ## Launcher source chọn runtime có chữ ký — 16/11/2026
 
 CodeIntegrity event 3077/3033 lúc 13:52:29 ghi `cmd.exe` bị chặn khi mở `.venv/Scripts/pythonw.exe` chưa ký số. `Run.bat` tại workspace không có `Zone.Identifier`; Python PSF và DLL Python tại `.tools/python311` có chữ ký hợp lệ. Đổi launcher ưu tiên runtime PSF đã có cấu hình `_pth`, giữ fallback `.venv` cho môi trường không có runtime này.

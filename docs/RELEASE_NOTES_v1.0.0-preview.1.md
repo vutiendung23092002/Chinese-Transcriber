@@ -3,7 +3,7 @@
 > **PRE-RELEASE — PHẦN LIVE / THU ÂM TRỰC TIẾP CHƯA HOÀN THIỆN.**
 > Ưu tiên dùng chức năng dịch file âm thanh. Live đang được hoàn thiện và chưa được nghiệm thu đầy đủ với microphone thực.
 
-Bản Windows x64 cập nhật ngày 16/11/2026. ZIP và MSI được build lại cùng đợt; commit mã nguồn và SHA-256 EXE được ghi trong `BUILD-INFO.json` bên trong gói. Tag Preview 1 được giữ nguyên; xem commit trong file này nếu cần build lại đúng phiên bản.
+Bản Windows x64 cập nhật ngày 16/11/2026. ZIP và MSI được build lại cùng đợt từ mã ứng dụng [e12403f](https://github.com/vutiendung23092002/Chinese-Transcriber/commit/e12403fddc7ff48f58bf697868d48f12734d49d9); commit và SHA-256 EXE cũng được ghi trong `BUILD-INFO.json` bên trong gói. EXE nằm trong ZIP và cần các thư mục đi kèm. Tag Preview 1 được giữ nguyên.
 
 ## Dịch file với hai chế độ
 
@@ -30,9 +30,9 @@ Bản Windows x64 cập nhật ngày 16/11/2026. ZIP và MSI được build lạ
 3. Mở **Chinese Transcriber** từ Start Menu. Lối tắt dùng runtime Python chính thức đi kèm để chạy ứng dụng; không cần cài Python riêng.
 4. Có thể gỡ từ **Settings → Apps → Installed apps**. Bộ cài không quản lý thư viện dữ liệu mặc định tại `%LOCALAPPDATA%\ChineseTranscriber`; dữ liệu đó được giữ lại khi gỡ.
 
-Đã kiểm tra cài đặt và gỡ cài đặt thành công trên Windows 11 x64 khi Smart App Control ở trạng thái On; đối chiếu đủ 1.222 file, lối tắt Start Menu, khởi động launcher và SQLite integrity. Sau khi gỡ, sản phẩm/lối tắt/file ứng dụng đã được xóa, file ngoài bộ cài và thư viện thử nghiệm được giữ lại.
+MSI đợt này đã được Windows Installer trích xuất thành công: đủ 1.220 file, hash manifest khớp, định nghĩa lối tắt đúng, launcher từ bản trích xuất chạy exit 0 và SQLite integrity ok. Máy kiểm tra đã có bản MSI đang cài nên đợt này không chạy lại chu kỳ cài/gỡ; đã xác minh bản đang cài, đăng ký sản phẩm và file EXE cũ được giữ nguyên. Đợt MSI trước đã qua kiểm tra cài/gỡ riêng. Chi tiết trong `docs/VALIDATION.md`.
 
-**MSI chưa có chữ ký số và không bảo đảm chạy trên mọi máy.** EXE PyInstaller riêng vẫn bị Application Control chặn 4551 sau khi cài trên máy kiểm tra; lối tắt Start Menu dùng launcher đi kèm đã được kiểm tra chạy thành công.
+**MSI chưa có chữ ký số và không bảo đảm chạy trên mọi máy.** EXE mới bị Application Control chặn 4551 khi kiểm tra khởi động tại máy build; launcher Python trong gói chạy được. Lối tắt Start Menu dùng launcher này.
 
 ### Gói ZIP portable
 
@@ -51,6 +51,8 @@ Các file `.sha256` trong Assets dùng để kiểm tra ZIP hoặc MSI sau khi t
 - 224 lượt kiểm tra bố cục ở các kích thước, theme và mức scale đều đạt.
 - Ca kiểm tra cửa sổ thừa đạt trên backend Qt Windows; launcher Python trong gói được kiểm tra thêm qua sáu lượt chuyển trang/kích thước/theme và không tạo cửa sổ thừa.
 - Luồng chép lời toàn bộ rồi dịch đã được thử bằng ASR và Codex thật; đúng một lượt dịch sau khi transcript hoàn tất, giữ timeline và xuất Trung/Việt TXT.
+- Bản portable mới qua smoke và ASR/codec WAV, MP3, M4A; WAV gọi Codex thật, xuất Trung/Việt TXT và SQLite integrity ok. Chính source/model trong gói cũng được thử chế độ cả bài: 3 đoạn được dịch trong một lượt sau ASR.
+- Bytecode trong EXE của 7 module chính khớp source `e12403f`; kiểm tra này không thay thế khởi động EXE đang bị Windows chặn.
 - Bản `Run.bat` trong Downloads khớp SHA-256 với bản build, nhưng có `Zone.Identifier` với `ZoneId=3` (nguồn Internet); bản build tại chỗ không có dấu này. Thông báo người dùng chụp phù hợp với việc Windows chặn BAT theo nguồn tải. [Tài liệu Microsoft về dấu nguồn Internet](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/unblock-file#description).
 - Chi tiết kết quả hiện tại và các kiểm tra ASR/Codex/codec của bản build trước nằm trong `docs/VALIDATION.md` và `BUILD-INFO.json` của gói.
 

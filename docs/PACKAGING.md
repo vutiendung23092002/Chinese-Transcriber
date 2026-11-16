@@ -24,6 +24,10 @@ Giữ nguyên cả thư mục khi chuyển máy. Có thể zip nguyên thư mụ
 
 ## Tình trạng Smart App Control và launcher Python
 
+Đợt cập nhật hai chế độ dịch từ commit `e12403f` có SHA-256 EXE `977971dcf28825128dd0b032d83b331e15e88b4711a15b0f05c69d6d06429f8f`. EXE đã build lại, bytecode các module ứng dụng khớp source; bước khởi động bị Application Control chặn 4551 tại máy kiểm tra. Launcher portable đã qua smoke, ASR/Codex thật, WAV/MP3/M4A, xuất TXT và SQLite integrity; chế độ cả bài gửi đủ các đoạn sau ASR trong đúng một lượt. Commit và kết quả của gói hiện tại được ghi trong `BUILD-INFO.json`.
+
+MSI mới dùng đúng payload ZIP đã xác minh, gồm 1.220 file. Vì máy kiểm tra đã có bản MSI đang cài, không chạy `verify_installer.py` để tránh tác động bản đó. Đợt này kiểm tra riêng bảng MSI/lối tắt và trích xuất bằng `/a` vào thư mục test, đối chiếu manifest và khởi động launcher trích xuất; đăng ký/EXE cũ không đổi. Đây là kiểm tra trích xuất/payload, không thay thế chu kỳ cài/nâng cấp/gỡ trên máy mới. Các kiểm tra cài/gỡ đầy đủ của MSI đợt trước được giữ riêng bên dưới.
+
 Bản EXE cập nhật từ commit 80567cb ngày 16/11/2026 chứa sửa lỗi thanh nháy khi mở Live. SHA-256: a853af5bb06f232229fcf34204579da0b379e753bfd28346e4983c6c8852aebc. Windows Application Control trên máy kiểm tra chặn khởi động với WinError 4551; chưa nghiệm thu chạy EXE mới. Report tại .test-data/live-flash-release-refresh/frozen-validation.json. Không thay đổi chính sách Windows hoặc thêm chứng thư; EXE chưa có chữ ký Authenticode của nhà phát hành.
 
 Bản EXE trước từ commit 9fa392c, SHA-256 bbc7e759b372eee933f8d23801c4a7814c7c495382f51c8d821ca01cd5a38540, đã chạy smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite; report .test-data/release/validation.json thuộc bản đó. Các kết quả cũ không được coi là nghiệm thu khởi động EXE cập nhật.
