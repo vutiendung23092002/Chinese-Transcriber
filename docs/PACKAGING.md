@@ -24,7 +24,9 @@ Giữ nguyên cả thư mục khi chuyển máy. Có thể zip nguyên thư mụ
 
 ## Tình trạng Smart App Control và launcher Python
 
-Bản EXE mới build ngày 16/11/2026 từ commit 9fa392c đã chạy đầy đủ smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite, report .test-data/release/validation.json. SHA-256 EXE: bbc7e759b372eee933f8d23801c4a7814c7c495382f51c8d821ca01cd5a38540. Bản này khởi động được trên máy kiểm tra mà không thay đổi chính sách Windows hoặc thêm chứng thư. Một artifact ngày 14/11 từng bị Smart App Control chặn với WinError 4551; chưa xác định được vì sao policy đánh giá khác nhau giữa các build. EXE mới vẫn chưa có chữ ký Authenticode của nhà phát hành.
+Bản EXE cập nhật từ commit 80567cb ngày 16/11/2026 chứa sửa lỗi thanh nháy khi mở Live. SHA-256: a853af5bb06f232229fcf34204579da0b379e753bfd28346e4983c6c8852aebc. Windows Application Control trên máy kiểm tra chặn khởi động với WinError 4551; chưa nghiệm thu chạy EXE mới. Report tại .test-data/live-flash-release-refresh/frozen-validation.json. Không thay đổi chính sách Windows hoặc thêm chứng thư; EXE chưa có chữ ký Authenticode của nhà phát hành.
+
+Bản EXE trước từ commit 9fa392c, SHA-256 bbc7e759b372eee933f8d23801c4a7814c7c495382f51c8d821ca01cd5a38540, đã chạy smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite; report .test-data/release/validation.json thuộc bản đó. Các kết quả cũ không được coi là nghiệm thu khởi động EXE cập nhật.
 
 Gói phát hành có thêm **Run.bat**, `python/` (runtime PSF chính thức có chữ ký), `src/` và `assets/`. Launcher chạy source bằng Python chính thức và dùng dependency native từ _internal. Không cần cài Python lên máy; vẫn là cùng ứng dụng PySide6 native. Có thể mở trực tiếp ChineseTranscriber.exe; giữ nguyên toàn bộ thư mục để chương trình tìm đúng dependency và model.
 

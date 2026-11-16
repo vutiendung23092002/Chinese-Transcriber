@@ -10,8 +10,8 @@ Chinese Transcriber là ứng dụng Windows native Python/PySide6. Báo cáo n�
 | 2. Storage/library | SQLite, import/SHA-256, dùng chung audio, transcript và nhiều version, trash/restore/purge, backup | Test quan hệ, import đồng thời, xóa bản riêng, khôi phục nhóm và dữ liệu đã xóa trước đạt |
 | 3. Speech-to-text | File SenseVoice/VAD; live Paraformer interim + SenseVoice final; journal thu liên tục | ASR thật và WAV replay qua capture đạt; benchmark cả hai model trên cùng fixture. Micro Bluetooth hiện có trả 0 frame; nghiệm thu thu giọng nói vật lý còn chờ thiết bị có tín hiệu |
 | 4. Translation | Codex app-server thật, kiểm tra model/effort, context/glossary, JSON/ID, retry/cancel, quota khi khả dụng | CLI đã cài trả đủ 8 model; dịch thật thành công; JSON sai/thiếu/trùng bị từ chối; không thay model ngầm |
-| 5. Integration | Timeline cùng hàng, playback/tua/tốc độ, hiệu đính tạo bản mới, TXT, so sánh, phục hồi | Luồng thật từ WAV đến hai TXT đạt; lỗi ASR không mất PCM, lỗi dịch không mất đoạn xong; bộ source hiện có 77 test đạt |
-| 6. Distribution | EXE PyInstaller build lại ngày 16/11/2026; gói portable có model/font/FFmpeg, hướng dẫn/checksum và launcher Python PSF | EXE mới đạt smoke/ASR/Codex/WAV-MP3-M4A/TXT/SQLite trên máy kiểm tra; bộ source hiện có 77 test đạt |
+| 5. Integration | Timeline cùng hàng, playback/tua/tốc độ, hiệu đính tạo bản mới, TXT, so sánh, phục hồi | Luồng thật từ WAV đến hai TXT đạt; lỗi ASR không mất PCM, lỗi dịch không mất đoạn xong; bộ source hiện có 78 test đạt |
+| 6. Distribution | EXE PyInstaller build lại với bản sửa Live từ commit 80567cb; gói portable có model/font/FFmpeg, hướng dẫn/checksum và launcher Python PSF | EXE chứa bản sửa nhưng khởi động bị Application Control chặn 4551; launcher trong gói đã qua kiểm tra cửa sổ thừa bằng Qt Windows. Kết quả ASR/Codex/codec của EXE trước được ghi riêng |
 
 Mã thực thi nằm tại src/chinese_transcriber. Không nhúng QtWebEngine, trình duyệt hoặc Electron. Các màn hình Phase 1 chỉ còn là tài liệu tham chiếu đã duyệt, không dùng làm runtime.
 
@@ -28,4 +28,4 @@ Python portable do uv cung cấp bị Windows Application Control chặn DLL chu
 
 ## Giới hạn nghiệm thu
 
-Triển khai sáu mốc đã có mã và gói chạy qua EXE mới lẫn Python launcher. Bản EXE ngày 16/11 đã chạy trên máy kiểm tra, chưa có chữ ký Authenticode của nhà phát hành. Live/thu âm trực tiếp chưa hoàn thiện và chưa được nghiệm thu đầy đủ trên nhiều thiết bị microphone; chưa có CER/WER bài giảng gán nhãn. Timestamp là VAD/sample ở cấp đoạn; chưa forced alignment từng từ hoặc diarization. Chi tiết và bằng chứng tại VALIDATION.md, ASR_BENCHMARK.json và các report riêng trong .test-data.
+Triển khai sáu mốc đã có mã và gói có EXE cùng Python launcher. EXE cập nhật sửa thanh nháy ở Live hiện bị Application Control chặn 4551 trên máy kiểm tra; chưa có chữ ký Authenticode của nhà phát hành. Live/thu âm trực tiếp chưa hoàn thiện và chưa được nghiệm thu đầy đủ trên nhiều thiết bị microphone; chưa có CER/WER bài giảng gán nhãn. Timestamp là VAD/sample ở cấp đoạn; chưa forced alignment từng từ hoặc diarization. Chi tiết và bằng chứng tại VALIDATION.md, ASR_BENCHMARK.json và các report riêng trong .test-data.

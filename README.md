@@ -10,7 +10,7 @@
 
 Mở **ChineseTranscriber.exe** trong gói phát hành, hoặc **Run.bat** tại thư mục dự án/gói dist/ChineseTranscriber. Gói đầy đủ kèm Python chính thức, Qt, FFmpeg và ba model INT8/VAD; giữ nguyên cả thư mục. Không cần cài Python, Docker, WSL hay GPU NVIDIA.
 
-EXE build ngày 16/11/2026 đã chạy trực tiếp trên máy kiểm tra. EXE chưa có chữ ký Authenticode; Smart App Control trên máy khác vẫn có thể chặn. Gói có thêm **Run.bat**: launcher dùng Python PSF có chữ ký chạy source native đi kèm. Không thay đổi chính sách Windows. Xem chi tiết tại [PACKAGING](docs/PACKAGING.md).
+Bản cập nhật ngày 16/11/2026 đã sửa thanh nháy khi mở Live trong cả EXE và mã nguồn đi kèm. **EXE mới hiện bị Windows Application Control chặn (`4551`) trên máy kiểm tra**, chưa có chữ ký Authenticode. Gói có thêm **Run.bat** dùng Python PSF có chữ ký để chạy source native đã sửa. Không thay đổi chính sách Windows. Xem chi tiết tại [PACKAGING](docs/PACKAGING.md).
 
 Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--portable` lưu trong `data` cạnh EXE; `--data-dir "D:\ThuVien"` chọn nơi khác. Codex CLI và đăng nhập ChatGPT dùng cài đặt hiện có trên máy; tài khoản/token không nằm trong gói portable.
 
@@ -29,7 +29,7 @@ Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--p
 
 ## Kết quả xác minh và giới hạn
 
-Bản EXE build ngày 16/11/2026 đã khởi động và chạy ASR → Codex thật → hai TXT; Qt giải mã WAV/MP3/M4A, SQLite integrity và nguồn dùng chung đều đạt. Bộ kiểm tra source hiện có 77 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Các màn File, Ghi âm, Thư viện, Thuật ngữ và Cài đặt triển khai theo ảnh đã duyệt; danh sách model và số nấc suy luận lấy từ Codex thật. Gói vẫn có Python launcher để dùng khi cần.
+Bộ kiểm tra source hiện có 78 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Bản sửa Live không còn tạo cửa sổ phân cách thừa trong kiểm tra Qt Windows và launcher Python trong gói. EXE mới chứa bản sửa nhưng chưa khởi động được do Windows chặn. Bản EXE trước đã qua ASR → Codex thật → hai TXT, giải mã WAV/MP3/M4A, SQLite integrity và giữ nguồn dùng chung; kết quả đó được lưu riêng trong [báo cáo kiểm thử](docs/VALIDATION.md).
 
 **Live/thu âm trực tiếp đang được hoàn thiện.** Tuyến xử lý đã được kiểm tra bằng WAV phát lại với ASR/Codex thật, nhưng chưa được nghiệm thu đầy đủ trên nhiều microphone và driver. Chi tiết môi trường và các giới hạn kiểm tra nằm trong [báo cáo kiểm thử](docs/VALIDATION.md).
 

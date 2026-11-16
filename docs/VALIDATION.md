@@ -2,7 +2,13 @@
 
 Ngày 14/11/2026. Windows 11 x64, Intel Core i7-12700F (20 logical CPU), RAM 31,8 GiB. Python 3.11.9, Qt/PySide6 6.12.0, sherpa-onnx 1.13.8. ASR giới hạn 4 luồng CPU, VAD 1 luồng; không CUDA, Docker hoặc WSL.
 
-## Build lại EXE — 16/11/2026
+## Sửa cửa sổ nháy khi mở Live — 16/11/2026
+
+Commit 80567cb sửa đường phân cách được bật hiển thị trước khi có parent, khiến Qt tạo một cửa sổ QFrame 1×480 px rồi lập tức gắn lại vào panel. Ca hồi quy ghi nhận tám cửa sổ thừa trước khi sửa; sau khi tạo QFrame với parent là panel điều khiển, ca kiểm tra đạt trên Qt offscreen và backend Qt Windows. Toàn bộ 78 test source đạt trong 42,79 giây; 224 lượt kiểm tra bố cục/scale đạt. Launcher Python trong gói được kiểm tra thêm qua sáu lượt chuyển trang/theme/kích thước, không có cửa sổ thừa.
+
+EXE đã build lại từ commit 80567cb; bytecode khởi tạo Live trong EXE khớp source đã sửa. SHA-256: a853af5bb06f232229fcf34204579da0b379e753bfd28346e4983c6c8852aebc. Bước khởi động bị Windows Application Control chặn với WinError 4551; chưa nghiệm thu chạy EXE mới. Report tại .test-data/live-flash-release-refresh/frozen-validation.json. ZIP phát hành được thay bằng EXE mới và launcher source đã sửa; BUILD-INFO.json ghi riêng kết quả của hai cách chạy.
+
+## Build EXE trước bản sửa Live — 16/11/2026
 
 Build từ commit 9fa392c bằng PyInstaller 6.22.3 và Python PSF 3.11.9. EXE mới có các màn giao diện hiện tại và SVG dropdown; smoke exit 0. Kiểm tra trực tiếp EXE đóng gói qua WAV, MP3, M4A đều có ASR thật, Qt decode 89.472 mẫu, không lỗi codec và SQLite integrity ok. WAV gọi Codex thật, kiểm tra ID JSON, xuất hai TXT và giữ nguồn sau trash/restore. Report .test-data/release/validation.json ghi frozen=true, source_mode=false và portable_python=false. SHA-256 EXE: bbc7e759b372eee933f8d23801c4a7814c7c495382f51c8d821ca01cd5a38540.
 
