@@ -1,6 +1,6 @@
 # Chinese Transcriber 1.0
 
-Ứng dụng Windows native Python + PySide6: chép lời tiếng Trung bằng CPU, dịch tiếng Việt qua Codex CLI, quản lý nguồn âm thanh và nhiều phiên bản dịch. Phase 2 triển khai theo thiết kế Pastel Light đã duyệt. Có Light/Dark; giữ sidebar capsule và hai cột trái cố định theo kích thước cửa sổ, không cuộn giữa hoặc đổi độ rộng khi chuyển tab.
+Ứng dụng Windows giúp chép lời tiếng Trung bằng CPU, dịch sang tiếng Việt qua Codex CLI và quản lý nguồn âm thanh cùng nhiều phiên bản dịch. Giao diện native Python + PySide6, hỗ trợ chế độ Sáng/Tối.
 
 > **Bản thử nghiệm — Live/thu âm trực tiếp chưa hoàn thiện.** Ưu tiên sử dụng dịch file âm thanh; phần Live chưa được nghiệm thu đầy đủ với microphone thực.
 
@@ -31,9 +31,9 @@ Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--p
 
 Bản EXE build ngày 16/11/2026 đã khởi động và chạy ASR → Codex thật → hai TXT; Qt giải mã WAV/MP3/M4A, SQLite integrity và nguồn dùng chung đều đạt. Bộ kiểm tra source hiện có 77 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Các màn File, Ghi âm, Thư viện, Thuật ngữ và Cài đặt triển khai theo ảnh đã duyệt; danh sách model và số nấc suy luận lấy từ Codex thật. Gói vẫn có Python launcher để dùng khi cần.
 
-Microphone Bluetooth soundcore R60i NC trên máy phát triển được nhận diện nhưng cả PortAudio và Qt trả **0 mẫu âm thanh**. Pipeline live đã qua kiểm tra bằng WAV tiếng Trung chính thức đưa vào đầu vào capture, dùng ASR/Codex thật; chưa xác nhận thu giọng nói trực tiếp trên thiết bị này. Ứng dụng báo chờ dữ liệu và không báo thành công với bản ghi rỗng.
+**Live/thu âm trực tiếp đang được hoàn thiện.** Tuyến xử lý đã được kiểm tra bằng WAV phát lại với ASR/Codex thật, nhưng chưa được nghiệm thu đầy đủ trên nhiều microphone và driver. Chi tiết môi trường và các giới hạn kiểm tra nằm trong [báo cáo kiểm thử](docs/VALIDATION.md).
 
-Benchmark chạy trên **Intel i7-12700F / 31,8 GiB**, CPU 4 luồng; chưa đo trên Ryzen 5 7535HS / 16 GB. Các fixture ngắn dùng đo tốc độ, chưa có đánh giá CER/WER trên bài giảng. Mốc giờ theo VAD/sample, chưa phải căn chỉnh từng từ. Kiểm tra bổ sung phần microphone và loại kết quả chỉ có dấu câu đưa tổng số test lên **64**; chưa xác nhận cải thiện độ chính xác khi thu loa điện thoại qua mic tai nghe thực. Xem [báo cáo kiểm thử](docs/VALIDATION.md).
+Hiệu năng phụ thuộc phần cứng, độ dài và nội dung âm thanh. [Benchmark](docs/ASR_BENCHMARK.json) ghi rõ cấu hình máy thử nghiệm và kết quả đo trên các fixture ngắn; đây không phải cấu hình máy bắt buộc. Chưa có đánh giá CER/WER trên tập bài giảng gán nhãn. Mốc giờ hiện ở cấp đoạn theo VAD/sample, chưa căn chỉnh từng từ.
 
 ## Phát triển và đóng gói
 
@@ -52,7 +52,7 @@ $env:QT_QPA_PLATFORM='offscreen'
 
 Sau khi cài môi trường và tải model, mở `Run.bat` để chạy từ source. Launcher tự dùng `.venv\Scripts\pythonw.exe` nếu có.
 
-Ở workspace bàn giao, `.tools/python311/python.exe` là runtime PSF 3.11.9 đã xác minh, đọc dependency trong `.venv` và source trong `src`; có thể dùng thay `.venv/Scripts/python.exe`. Script build cũng tự chọn runtime này nếu có. Quy trình chi tiết: [PACKAGING](docs/PACKAGING.md).
+Script build cũng hỗ trợ Python PSF embeddable tại `.tools/python311` nếu runtime này đã được cấu hình để đọc dependency và mã nguồn. Quy trình đóng gói chi tiết: [PACKAGING](docs/PACKAGING.md).
 
 ## Tài liệu
 

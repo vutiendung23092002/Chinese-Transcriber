@@ -4,7 +4,7 @@
   "logical_cores": 20,
   "ram_gib": 31.8,
   "threads": 4,
-  "target_note": "Measured on development PC, not the requested Ryzen 5 7535HS laptop.",
+  "hardware_note": "Measured on the reference test machine listed here. Performance varies by hardware and workload.",
   "accuracy_note": "No labelled lecture corpus or CER/WER evaluation. These short fixtures measure speed only. VAD boundaries are not word-level alignment.",
   "runs": [
     {

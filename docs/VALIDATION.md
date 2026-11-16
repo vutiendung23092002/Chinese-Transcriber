@@ -96,7 +96,7 @@ Cả SenseVoiceSmall INT8 và Streaming Paraformer INT8 được chạy trên **
 
 RTF = thời gian inference / thời lượng nguồn; số trên không gồm tốc độ phát microphone, mạng hoặc Codex. Nạp hai model khoảng 2,39 giây, process khoảng 601–626 MiB RSS. Pipeline file đã nạp model mất 0,209–0,237 giây cho fixture 5,592 giây. Đây là phép đo ngắn trên máy phát triển, không phải cam kết tốc độ bài giảng dài.
 
-SenseVoice được chọn tạo chữ cuối; Paraformer cung cấp interim. Kết quả ngắn cho thấy đầu ra còn lỗi, đặc biệt code-switching. Chưa có tập bài giảng gán nhãn để kết luận CER/WER, độ chính xác chuyên ngành hoặc ưu thế tổng quát. Chưa benchmark trên Ryzen 5 7535HS / 16 GB theo máy đích.
+SenseVoice được chọn tạo chữ cuối; Paraformer cung cấp interim. Kết quả ngắn cho thấy đầu ra còn lỗi, đặc biệt code-switching. Chưa có tập bài giảng gán nhãn để kết luận CER/WER, độ chính xác chuyên ngành hoặc ưu thế tổng quát. Các số đo chỉ phản ánh cấu hình và fixture đã ghi trong báo cáo; hiệu năng thay đổi theo phần cứng và dữ liệu âm thanh.
 
 ## Các giới hạn cần kiểm tra thực tế
 

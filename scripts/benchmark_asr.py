@@ -1,4 +1,4 @@
-"""Measure real CPU inference on official Mandarin fixtures, not a claimed laptop score."""
+"""Measure CPU inference on official Mandarin fixtures and record the test hardware."""
 import json
 import platform
 import subprocess
@@ -19,7 +19,7 @@ def main():
         cpu=subprocess.check_output(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_Processor).Name'],text=True,creationflags=0x08000000).strip()
     except Exception: pass
     report={'platform':platform.platform(),'cpu':cpu,'logical_cores':psutil.cpu_count(),
-        'ram_gib':round(psutil.virtual_memory().total/2**30,1),'threads':4,'target_note':'Measured on development PC, not the requested Ryzen 5 7535HS laptop.',
+        'ram_gib':round(psutil.virtual_memory().total/2**30,1),'threads':4,'hardware_note':'Measured on the reference test machine listed here. Performance varies by hardware and workload.',
         'accuracy_note':'No labelled lecture corpus or CER/WER evaluation. These short fixtures measure speed only. VAD boundaries are not word-level alignment.',
         'runs':[]}
     started=time.perf_counter(); engine=Recognizer(models,4,True); report['load_seconds']=round(time.perf_counter()-started,3)

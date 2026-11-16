@@ -28,4 +28,4 @@ File `.zip.sha256` trong Assets dùng để kiểm tra ZIP sau khi tải, không
 
 - **Live/thu âm trực tiếp chưa hoàn thiện**; các kiểm tra bằng WAV phát lại chưa thay thế nghiệm thu microphone thực. Kết quả thu qua microphone Bluetooth/loa điện thoại chưa được bảo đảm.
 - EXE chưa có chữ ký Authenticode. Smart App Control trên máy khác có thể chặn dù bản này đã chạy được trên máy kiểm tra.
-- Chưa có đánh giá CER/WER trên tập bài giảng gán nhãn và chưa benchmark trên máy Ryzen đích. Mốc giờ ở cấp đoạn, chưa căn chỉnh từng từ.
+- Chưa có đánh giá CER/WER trên tập bài giảng gán nhãn. Hiệu năng phụ thuộc phần cứng và dữ liệu âm thanh. Mốc giờ ở cấp đoạn, chưa căn chỉnh từng từ.

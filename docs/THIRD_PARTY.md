@@ -15,4 +15,4 @@
 
 Gói có licenses/Python-LICENSE.txt, LGPL-3.0.txt, GPL-3.0.txt và FFmpeg-build.txt; metadata/license của thư viện nằm trong _internal. FFmpeg đi kèm là build 9.0.2 essentials từ gyan.dev, cấu hình --enable-gpl --enable-version3; thông tin nguồn build: https://www.gyan.dev/ffmpeg/builds/ và https://github.com/FFmpeg/FFmpeg. Font có OFL riêng.
 
-Models và font giữ riêng ngoài mã ứng dụng. Đối chiếu các giấy phép nguồn trước khi phân phối thương mại hoặc sửa đổi; bản đang bàn giao phục vụ mục đích học tập cá nhân được yêu cầu.
+Models và font giữ riêng ngoài mã ứng dụng. Thông tin giấy phép của từng thành phần được liệt kê ở trên và kèm trong gói phát hành; việc sử dụng, sửa đổi và phân phối phải tuân thủ các giấy phép tương ứng.
