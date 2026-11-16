@@ -3,7 +3,7 @@ import pytest
 import soundfile as sf
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
-from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QComboBox, QPushButton
 from PySide6.QtGui import QFontInfo, QColor
 from chinese_transcriber.file_page import WaveformSlider
 from chinese_transcriber.storage import Store
@@ -30,7 +30,7 @@ def file_window(qtbot, tmp_path):
 def test_file_workflow_empty_transcript_and_translation_actions(file_window, qtbot, monkeypatch):
     window = file_window
     assert window.timeline.empty.isVisible()
-    assert not window.translate_button.isEnabled()
+    assert not any(button.text()=='Tạo bản dịch' for button in window.context.findChildren(QPushButton))
     assert not window.file_page.export_zh.isEnabled()
     assert not window.file_page.export_vi.isEnabled()
     assert window.file_page.steps.completed == 1
@@ -40,7 +40,7 @@ def test_file_workflow_empty_transcript_and_translation_actions(file_window, qtb
     window.transcript_id = transcript
     window.fill_timeline()
     assert not window.timeline.empty.isVisible()
-    assert window.translate_button.isEnabled()
+    assert window.transcribe_button.isEnabled()
     assert window.file_page.export_zh.isEnabled()
     assert not window.file_page.export_vi.isEnabled()
     version = window.store.new_version(window.audio_id, transcript, 'test', 'low', '', [])
@@ -68,7 +68,7 @@ def test_file_workflow_empty_transcript_and_translation_actions(file_window, qtb
     window.is_busy = True
     window.refresh_file_state()
     assert not window.transcribe_button.isEnabled()
-    assert not window.translate_button.isEnabled()
+    assert not window.file_translation_toggle.isEnabled()
     window.is_busy = False
     window.refresh_file_state()
 
@@ -140,7 +140,7 @@ def test_approved_typography_and_solid_play_glyph(file_window, qtbot):
     assert window.file_import_button.height() == 48
     assert window.model_selector.height() == 116
     assert window.transcribe_button.text() == 'Chép lời tiếng Trung'
-    assert window.translate_button.text() == 'Tạo bản dịch'
+    assert window.file_translation_toggle.text() == 'Dịch cả bài một lượt'
     assert page.play_button.size().width() == page.play_button.size().height() == 52
     rendered = page.play_button.grab().toImage()
     assert rendered.pixelColor(25, 26) == QColor(window.colors['on_primary'])
@@ -175,3 +175,17 @@ def test_partial_asr_does_not_enable_complete_vietnamese_export(file_window):
     store.set_transcript_status(transcript,'complete'); store.set_version_status(version,'complete')
     window.refresh_file_state()
     assert window.file_page.export_vi.isEnabled()
+
+
+def test_translation_mode_survives_navigation_theme_and_reopening(file_window,qtbot):
+    window=file_window
+    qtbot.mouseClick(window.file_translation_toggle,Qt.MouseButton.LeftButton)
+    assert window.store.setting('file_translation_mode')=='whole'
+    window.navigate('live'); window.navigate('file'); window.change_theme(1)
+    assert window.file_translation_toggle.isChecked()
+    window.change_theme(0)
+    assert window.file_translation_toggle.isChecked()
+    qtbot.mouseClick(window.file_translation_toggle,Qt.MouseButton.LeftButton)
+    assert window.store.setting('file_translation_mode')=='parallel'
+    window.open_audio(window.audio_id)
+    assert not window.file_translation_toggle.isChecked()

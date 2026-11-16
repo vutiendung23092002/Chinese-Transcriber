@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 import threading
 import numpy as np
 import pytest
@@ -183,3 +184,122 @@ def test_last_segment_is_not_lost_when_producer_finishes_after_queue_snapshot(li
     assert result['status']=='complete' and reads[0]>=2
     rows=original(result['transcript_id'],result['version_id'])
     assert len(rows)==2 and all(row['translation_status']=='complete' for row in rows)
+
+
+def test_whole_mode_waits_for_complete_transcript_and_sends_more_than_six_rows_once(library,monkeypatch):
+    store,audio=library; calls=[]; discovered=[]; events=[]
+    class Recognizer:
+        def __init__(self,*args): pass
+        def transcribe(self,path,final,*args,**kwargs):
+            for i in range(1,15):
+                final(segment(i))
+                assert not calls and not discovered
+    def translate(*args,**kwargs):
+        assert store.latest_transcript(audio)['status']=='complete'
+        calls.append((args[7],kwargs))
+        return response(args[7])
+    monkeypatch.setattr(asr,'Recognizer',Recognizer)
+    monkeypatch.setattr(pipeline,'find_codex',lambda *_:(discovered.append(True) or 'test.exe'))
+    monkeypatch.setattr(pipeline,'translate_segments',translate)
+    result=run(store,audio,events.append,threading.Event(),translation_mode='whole')
+    assert result['status']=='complete' and len(calls)==1 and len(calls[0][0])==14
+    assert calls[0][1]['timeout']>180
+    rows=store.segments(result['transcript_id'],result['version_id'])
+    assert [row['id'] for row in rows]==[row['id'] for row in calls[0][0]]
+    assert all(row['translation_status']=='complete' and row['vi'] for row in rows)
+    assert all(item['translated']==0 for item in events if not item['asr_done'])
+    assert json.loads(store.one('SELECT payload FROM jobs')['payload'])['translation_mode']=='whole'
+
+
+@pytest.mark.parametrize('cancelled',[False,True])
+def test_whole_mode_does_not_send_an_incomplete_transcript(library,monkeypatch,cancelled):
+    store,audio=library; cancel=threading.Event(); calls=[]
+    class Recognizer:
+        def __init__(self,*args): pass
+        def transcribe(self,path,final,*args,**kwargs):
+            final(segment(1))
+            if cancelled:
+                cancel.set(); raise InterruptedError('stopped')
+            raise RuntimeError('decoder failed')
+    monkeypatch.setattr(asr,'Recognizer',Recognizer)
+    monkeypatch.setattr(pipeline,'find_codex',lambda *_:(calls.append('discovery') or 'test.exe'))
+    monkeypatch.setattr(pipeline,'translate_segments',lambda *a,**k:calls.append('translate'))
+    result=run(store,audio,lambda _:None,cancel,translation_mode='whole')
+    assert result['status']==('interrupted' if cancelled else 'partial')
+    assert calls==[] and len(store.segments(result['transcript_id']))==1
+    assert store.segments(result['transcript_id'],result['version_id'])[0]['translation_status']=='queued'
+
+
+def test_whole_mode_resumes_same_snapshot_and_transcript_after_cancel(library,monkeypatch):
+    store,audio=library; cancel=threading.Event(); checkpoints=[]; calls=[]
+    class Recognizer:
+        def __init__(self,*args): pass
+        def transcribe(self,path,final,stop,progress,skip_before=0):
+            checkpoints.append(skip_before)
+            if not skip_before:
+                final(segment(1)); stop.set(); raise InterruptedError('stopped')
+            for i in range(2,10): final(segment(i))
+    def translate(*args,**kwargs):
+        calls.append(args[7]); return response(args[7])
+    monkeypatch.setattr(asr,'Recognizer',Recognizer)
+    monkeypatch.setattr(pipeline,'translate_segments',translate)
+    first=run(store,audio,lambda _:None,cancel,translation_mode='whole')
+    first_id=store.segments(first['transcript_id'])[0]['id']
+    store.set_setting('file_translation_mode','parallel'); store.recover_jobs(); cancel.clear()
+    resumed=run(store,audio,lambda _:None,cancel,version_id=first['version_id'],translation_mode='parallel')
+    assert resumed['status']=='complete' and resumed['translation_mode']=='whole'
+    assert resumed['version_id']==first['version_id'] and checkpoints==[0,1]
+    assert len(calls)==1 and len(calls[0])==9 and calls[0][0]['id']==first_id
+    assert len(store.versions(audio))==len(store.rows('SELECT * FROM jobs'))==1
+
+
+def test_whole_translation_failure_retries_all_rows_without_repeating_asr(library,monkeypatch):
+    store,audio=library; calls=[]; recognition=[]
+    class NoDelay:
+        def is_set(self): return False
+        def wait(self,*args): return False
+    class Recognizer:
+        def __init__(self,*args): pass
+        def transcribe(self,path,final,*args,**kwargs):
+            recognition.append(True)
+            for i in range(1,9): final(segment(i))
+    def failure(*args,**kwargs):
+        calls.append([row['id'] for row in args[7]]); raise ValueError('output too long')
+    monkeypatch.setattr(asr,'Recognizer',Recognizer)
+    monkeypatch.setattr(pipeline,'translate_segments',failure)
+    first=run(store,audio,lambda _:None,NoDelay(),translation_mode='whole')
+    assert first['status']=='partial' and len(calls)==3 and calls[0]==calls[1]==calls[2]
+    assert len(calls[0])==8
+    assert all(row['translation_status']=='failed' and not row['vi'] for row in store.segments(first['transcript_id'],first['version_id']))
+    calls.clear()
+    def success(*args,**kwargs):
+        calls.append(args[7]); return response(args[7])
+    monkeypatch.setattr(pipeline,'translate_segments',success)
+    resumed=run(store,audio,lambda _:None,threading.Event(),version_id=first['version_id'])
+    assert resumed['status']=='complete' and len(calls)==1 and len(recognition)==1
+
+
+def test_whole_mode_can_translate_existing_transcript_without_new_asr(library,monkeypatch):
+    store,audio=library; transcript=store.new_transcript(audio,'saved'); calls=[]
+    for i in range(8): store.append_segment(transcript,i,i+1,f'句子{i}')
+    store.set_transcript_status(transcript,'complete')
+    monkeypatch.setattr(pipeline,'transcribe_job',lambda *a,**k:pytest.fail('Saved transcript must be reused'))
+    def translate(*args,**kwargs):
+        calls.append(args[7]); return response(args[7])
+    monkeypatch.setattr(pipeline,'translate_segments',translate)
+    result=run(store,audio,lambda _:None,threading.Event(),transcript_id=transcript,translation_mode='whole')
+    assert result['status']=='complete' and result['transcript_id']==transcript
+    assert len(calls)==1 and len(calls[0])==8 and len(store.rows('SELECT * FROM transcripts'))==1
+
+
+def test_cancel_during_whole_translation_does_not_commit_response(library,monkeypatch):
+    store,audio=library; cancel=threading.Event()
+    class Recognizer:
+        def __init__(self,*args): pass
+        def transcribe(self,path,final,*args,**kwargs): final(segment(1))
+    def translate(*args,**kwargs):
+        cancel.set(); return response(args[7])
+    monkeypatch.setattr(asr,'Recognizer',Recognizer); monkeypatch.setattr(pipeline,'translate_segments',translate)
+    result=run(store,audio,lambda _:None,cancel,translation_mode='whole')
+    rows=store.segments(result['transcript_id'],result['version_id'])
+    assert result['status']=='interrupted' and rows[0]['translation_status']=='queued' and not rows[0]['vi']

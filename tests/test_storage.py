@@ -43,3 +43,12 @@ def test_segments_must_not_overlap(tmp_path):
     store,path,a,t,s=source(tmp_path)
     with pytest.raises(ValueError): store.append_segment(t,1,3,'bad')
     assert len(store.segments(t))==1
+
+
+def test_batch_translation_commit_rolls_back_if_a_result_cannot_be_saved(tmp_path):
+    store,path,audio,transcript,segment=source(tmp_path)
+    version=store.new_version(audio['id'],transcript,'one','low','',[])
+    with pytest.raises(ValueError,match='không thuộc'):
+        store.translation_results(version,[dict(id=segment,vi='hợp lệ',note=''),dict(id='wrong-id',vi='sai',note='')])
+    row=store.segments(transcript,version)[0]
+    assert row['translation_status']=='queued' and not row['vi']

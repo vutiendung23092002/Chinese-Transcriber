@@ -7,7 +7,7 @@ import sys
 
 if '--child' in sys.argv:
     from PySide6.QtCore import QCoreApplication,QEvent
-    from PySide6.QtWidgets import QApplication,QScrollArea,QComboBox,QPushButton,QPlainTextEdit,QSlider,QToolButton
+    from PySide6.QtWidgets import QApplication,QScrollArea,QComboBox,QPushButton,QPlainTextEdit,QSlider,QToolButton,QCheckBox
     from chinese_transcriber.storage import Store
     from chinese_transcriber.workspace import WorkspaceWindow
     from chinese_transcriber.widgets import PAGES
@@ -23,11 +23,19 @@ if '--child' in sys.argv:
             for key,_,_ in PAGES:
                 window.navigate(key)
                 QCoreApplication.sendPostedEvents(None,QEvent.Type.DeferredDelete); app.processEvents()
-                widgets=window.context.findChildren(QComboBox)+window.context.findChildren(QPushButton)+window.context.findChildren(QPlainTextEdit)+window.context.findChildren(QSlider)+window.context.findChildren(QToolButton)
+                widgets=window.context.findChildren(QComboBox)+window.context.findChildren(QPushButton)+window.context.findChildren(QPlainTextEdit)+window.context.findChildren(QSlider)+window.context.findChildren(QToolButton)+window.context.findChildren(QCheckBox)
                 panel=window.context_panel
                 inside=all(panel.contentsRect().contains(x.mapTo(panel,x.rect().topLeft())) and panel.contentsRect().contains(x.mapTo(panel,x.rect().bottomRight())) for x in widgets if x.isVisible())
                 aligned=panel.geometry()==window.context.rect().adjusted(6,24,-6,-18) and panel.mapTo(window,panel.rect().bottomRight()).y()==window.rail.pill.mapTo(window,window.rail.pill.rect().bottomRight()).y()
                 live_inside=True
+                if key=='file':
+                    toggle=window.file_translation_toggle; hint=window.file_translation_hint
+                    original=toggle.isChecked()
+                    for enabled in (False,True):
+                        toggle.setChecked(enabled); app.processEvents()
+                        live_inside=live_inside and all(panel.contentsRect().contains(x.mapTo(panel,x.rect().bottomRight())) for x in (toggle,hint))
+                        live_inside=live_inside and toggle.width()>=54+toggle.fontMetrics().horizontalAdvance(toggle.text())
+                    toggle.setChecked(original)
                 if key=='live':
                     page=window.live_page
                     controls=(page.transport,page.record_button,page.pause_button,page.stop_button,page.timeline,page.draft)

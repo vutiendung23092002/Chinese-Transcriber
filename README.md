@@ -17,7 +17,7 @@ Bản cập nhật ngày 16/11/2026 đã sửa thanh nháy khi mở Live trong c
 Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--portable` lưu trong `data` cạnh EXE; `--data-dir "D:\ThuVien"` chọn nơi khác. Codex CLI và đăng nhập ChatGPT dùng cài đặt hiện có trên máy; tài khoản/token không nằm trong gói portable.
 
 1. Vào **Cài đặt & Codex → Kiểm tra kết nối**; chọn model/effort được tài khoản xác nhận.
-2. **Dịch file** → chọn âm thanh → điền bối cảnh/thuật ngữ → **Chép lời và dịch**. Đoạn chốt xong được đưa sang dịch song song, phần chép lời vẫn chạy. **Tạo bản dịch** dùng khi muốn dịch lại bản Trung đã có.
+2. **Dịch file** → chọn âm thanh → điền bối cảnh/thuật ngữ → chọn toggle **Dịch cả bài một lượt** → **Chép lời và dịch**. Tắt: dịch song song các đoạn đã chốt. Bật: chép lời hoàn tất rồi gửi toàn bộ bản Trung trong một lượt. Chọn **Bản chép lời** để nút chính chuyển thành **Dịch bản chép lời** khi muốn dùng lại bản Trung đã có.
 3. Xem timeline cùng hàng, nghe/tua, hiệu đính hoặc xuất **Trung TXT / Việt TXT**.
 
 ## Chức năng
@@ -31,7 +31,7 @@ Dữ liệu mặc định: `%LOCALAPPDATA%/ChineseTranscriber`. Tùy chọn `--p
 
 ## Kết quả xác minh và giới hạn
 
-Bộ kiểm tra source hiện có 78 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Bản sửa Live không còn tạo cửa sổ phân cách thừa trong kiểm tra Qt Windows và launcher Python trong gói. EXE mới chứa bản sửa nhưng bước chạy kiểm thử tự động bị Windows chặn; phản hồi chạy EXE tải về của người dùng được ghi riêng, không thay thế kiểm thử tích hợp. Bản EXE trước đã qua ASR → Codex thật → hai TXT, giải mã WAV/MP3/M4A, SQLite integrity và giữ nguồn dùng chung; kết quả đó được lưu riêng trong [báo cáo kiểm thử](docs/VALIDATION.md).
+Bộ kiểm tra source hiện có 90 test đạt; kiểm tra bố cục 7 trang × 4 kích thước × 2 theme × 4 mức scale đạt. Chế độ dịch cả bài đã được kiểm tra bằng ASR và Codex thật, giữ đúng các dòng/mốc giờ và xuất hai TXT. Bản sửa Live không còn tạo cửa sổ phân cách thừa trong kiểm tra Qt Windows và launcher Python trong gói. Commit và kết quả kiểm tra của từng gói được ghi trong `BUILD-INFO.json` và [báo cáo kiểm thử](docs/VALIDATION.md).
 
 **Live/thu âm trực tiếp đang được hoàn thiện.** Tuyến xử lý đã được kiểm tra bằng WAV phát lại với ASR/Codex thật, nhưng chưa được nghiệm thu đầy đủ trên nhiều microphone và driver. Chi tiết môi trường và các giới hạn kiểm tra nằm trong [báo cáo kiểm thử](docs/VALIDATION.md).
 
@@ -52,7 +52,7 @@ $env:QT_QPA_PLATFORM='offscreen'
 .\scripts\build_windows.ps1 -Python .venv\Scripts\python.exe
 ```
 
-Sau khi cài môi trường và tải model, mở `Run.bat` để chạy từ source. Launcher tự dùng `.venv\Scripts\pythonw.exe` nếu có.
+Sau khi cài môi trường và tải model, mở `Run.bat` để chạy từ source. Launcher ưu tiên runtime PSF chính thức tại `.tools/python311` khi có `pythonw.exe` và cấu hình `python311._pth`, sau đó mới dùng `.venv\Scripts\pythonw.exe`. Runtime embeddable phải được cấu hình để đọc dependency và source như ghi trong PACKAGING.md.
 
 Script build cũng hỗ trợ Python PSF embeddable tại `.tools/python311` nếu runtime này đã được cấu hình để đọc dependency và mã nguồn. Quy trình đóng gói chi tiết: [PACKAGING](docs/PACKAGING.md).
 

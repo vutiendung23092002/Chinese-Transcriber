@@ -155,7 +155,8 @@ class ModelReasoningSelector(QFrame):
             QLabel#model_name {{ color:{colors['muted']}; font-size:15px; font-weight:400; }}
             QPushButton#model_picker, QToolButton#reasoning_reset {{ background:transparent; border:0; padding:0; min-height:0; min-width:0; border-radius:6px; }}
             QPushButton#model_picker:hover, QToolButton#reasoning_reset:hover {{ background:{colors['lavender']}; }}
-            QPushButton#model_picker:focus, QToolButton#reasoning_reset:focus {{ border:1px solid {colors['focus']}; }}
+            QPushButton#model_picker:focus {{ border:0; outline:none; }}
+            QToolButton#reasoning_reset:focus {{ border:1px solid {colors['focus']}; }}
         ''')
         body = QVBoxLayout(self)
         body.setContentsMargins(10, 10, 10, 10)

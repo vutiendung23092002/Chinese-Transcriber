@@ -3,13 +3,22 @@
 > **PRE-RELEASE — PHẦN LIVE / THU ÂM TRỰC TIẾP CHƯA HOÀN THIỆN.**
 > Ưu tiên dùng chức năng dịch file âm thanh. Live đang được hoàn thiện và chưa được nghiệm thu đầy đủ với microphone thực.
 
-Bản Windows x64 cập nhật ngày 16/11/2026. Mã nguồn đúng bản ZIP này: [80567cb](https://github.com/vutiendung23092002/Chinese-Transcriber/commit/80567cb1e8fbc37ccd33383014983495fc853648). Nếu tự build bản cập nhật, dùng commit được liên kết này.
+Bản Windows x64 cập nhật ngày 16/11/2026. ZIP và MSI được build lại cùng đợt; commit mã nguồn và SHA-256 EXE được ghi trong `BUILD-INFO.json` bên trong gói. Tag Preview 1 được giữ nguyên; xem commit trong file này nếu cần build lại đúng phiên bản.
+
+## Dịch file với hai chế độ
+
+- Thêm toggle **Dịch cả bài một lượt** dưới phần chọn model. **Tắt:** dịch song song như trước, tối đa 6 đoạn đang chờ mỗi lượt. **Bật:** chép lời hoàn tất rồi gửi toàn bộ bản Trung trong một lượt dịch; giữ nguyên ID, dòng và mốc giờ.
+- Ghi nhớ lựa chọn và lưu chế độ riêng cho từng tác vụ. Tiếp tục bài dở giữ nguyên chế độ và các phần đã lưu.
+- Bỏ nút phụ **Tạo bản dịch**. Khi chọn **Bản chép lời** đã hoàn chỉnh, nút chính đổi thành **Dịch bản chép lời**, không cần nhận dạng âm thanh lại.
+- Bỏ viền khi bấm chọn model và nét đứt khi bấm toggle. Điều khiển bằng bàn phím vẫn hoạt động.
+- Lượt dịch cả bài chờ tối đa 15 phút mỗi lần thử. Nếu bài vượt giới hạn của model, ứng dụng giữ bản Trung và báo lỗi; không tự chia thành các lượt nhỏ.
+- `Run.bat` trong source ưu tiên runtime Python PSF chính thức đã cấu hình trước `.venv`. Thay đổi này xử lý trường hợp Windows chặn launcher Python chưa ký số trong `.venv`, không sửa chính sách bảo mật.
 
 ## Cập nhật sửa thanh nháy ở Live
 
 - Sửa đường phân cách 1 px bị hiện thành cửa sổ riêng trong tích tắc khi mở tab Live.
 - EXE trong ZIP đã được build lại và xác minh chứa bản sửa; `Run.bat` cũng dùng mã nguồn đã sửa.
-- EXE bị Windows Application Control chặn (`4551`) trong lần kiểm tra build. Sau đó người dùng xác nhận **EXE từ ZIP tải trên Release chạy được**, trong khi mở `Run.bat` bị Smart App Control chặn. Đây là hai kết quả được ghi nhận riêng; không bảo đảm file nào cũng chạy trên mọi máy.
+- EXE, MSI và BAT chưa có bảo đảm chạy trên mọi chính sách Windows. Trước đợt build này, EXE đã từng bị chặn `4551` trong kiểm tra tại chỗ, nhưng người dùng mở được EXE tải về; BAT mang dấu nguồn Internet lại bị chặn ngay khi mở. Kết quả từng gói được ghi riêng trong `BUILD-INFO.json` và `docs/VALIDATION.md`.
 - **Với ZIP, ưu tiên mở `ChineseTranscriber.exe`.** `Run.bat` tải từ Internet có thể bị chặn ngay khi mở, dù runtime Python đi kèm có chữ ký. Không cần chuyển sang BAT khi EXE đang chạy bình thường.
 
 ## Tải và chạy
@@ -38,10 +47,10 @@ Các file `.sha256` trong Assets dùng để kiểm tra ZIP hoặc MSI sau khi t
 
 ## Đã kiểm tra
 
-- Toàn bộ 78 test source đạt, gồm ca bắt cửa sổ thừa ngay lúc chuyển sang Live.
+- Toàn bộ 90 test source đạt, gồm hai chế độ dịch, dừng/tiếp tục, lưu kết quả nguyên tử và ca bắt cửa sổ thừa ngay lúc chuyển sang Live.
 - 224 lượt kiểm tra bố cục ở các kích thước, theme và mức scale đều đạt.
 - Ca kiểm tra cửa sổ thừa đạt trên backend Qt Windows; launcher Python trong gói được kiểm tra thêm qua sáu lượt chuyển trang/kích thước/theme và không tạo cửa sổ thừa.
-- Mã khởi tạo Live trong EXE khớp mã nguồn đã sửa. Bước chạy EXE kiểm thử tự động bị Windows chặn; người dùng sau đó báo EXE tải về chạy được. Phản hồi đó chưa thay thế kiểm thử tích hợp EXE trên nhiều máy.
+- Luồng chép lời toàn bộ rồi dịch đã được thử bằng ASR và Codex thật; đúng một lượt dịch sau khi transcript hoàn tất, giữ timeline và xuất Trung/Việt TXT.
 - Bản `Run.bat` trong Downloads khớp SHA-256 với bản build, nhưng có `Zone.Identifier` với `ZoneId=3` (nguồn Internet); bản build tại chỗ không có dấu này. Thông báo người dùng chụp phù hợp với việc Windows chặn BAT theo nguồn tải. [Tài liệu Microsoft về dấu nguồn Internet](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/unblock-file#description).
 - Chi tiết kết quả hiện tại và các kiểm tra ASR/Codex/codec của bản build trước nằm trong `docs/VALIDATION.md` và `BUILD-INFO.json` của gói.
 

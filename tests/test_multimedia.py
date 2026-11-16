@@ -30,18 +30,17 @@ if '--legacy-handler' in sys.argv:
     # Reproduce the old callback's dependency on the GIL, not its log contents.
     qInstallMessageHandler(lambda *args:None)
 errors=[]; window.error=errors.append; beats=[]; progress=[]; main=threading.get_ident()
-original=window.translation_progress
+original=window.file_pipeline_event
 def on_progress(item):
     assert threading.get_ident()==main
-    progress.append(item['done']); original(item)
-window.translation_progress=on_progress
+    progress.append(item['translated']); original(item)
+window.file_pipeline_event=on_progress
 def translate(*args,**kwargs):
     time.sleep(.3)
     return [dict(id=row['id'],vi='Translation '+row['zh'],note='') for row in args[7]]
 timer=QTimer(); timer.timeout.connect(lambda:beats.append(time.monotonic())); timer.start(10)
-with patch('chinese_transcriber.workspace.find_codex',lambda *_:'test.exe'), \
-     patch('chinese_transcriber.workspace.capabilities',lambda *_:dict(models=[model])), \
-     patch('chinese_transcriber.codex.translate_segments',translate):
+with patch('chinese_transcriber.pipeline.find_codex',lambda *_:'test.exe'), \
+     patch('chinese_transcriber.pipeline.translate_segments',translate):
     QTimer.singleShot(0,window.translate)
     QTimer.singleShot(20,window.toggle_play)
     QTimer.singleShot(300,lambda:window.player.setPosition(500))
@@ -57,7 +56,8 @@ report=dict(heartbeats=len(beats),progress=progress,complete=all(row['translatio
 window.player.stop(); window.close()
 print(json.dumps(report),flush=True)
 assert report['heartbeats']>30 and report['complete'] and report['rows']==11
-assert progress==[0,6,6,11] and not errors and integrity=='ok' and not window.is_busy
+assert progress[0]==0 and progress[-1]==11 and 6 in progress
+assert not errors and integrity=='ok' and not window.is_busy
 '''
 
 

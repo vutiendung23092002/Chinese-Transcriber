@@ -2,6 +2,22 @@
 
 Ngày 14/11/2026. Windows 11 x64, Intel Core i7-12700F (20 logical CPU), RAM 31,8 GiB. Python 3.11.9, Qt/PySide6 6.12.0, sherpa-onnx 1.13.8. ASR giới hạn 4 luồng CPU, VAD 1 luồng; không CUDA, Docker hoặc WSL.
 
+## Launcher source chọn runtime có chữ ký — 16/11/2026
+
+CodeIntegrity event 3077/3033 lúc 13:52:29 ghi `cmd.exe` bị chặn khi mở `.venv/Scripts/pythonw.exe` chưa ký số. `Run.bat` tại workspace không có `Zone.Identifier`; Python PSF và DLL Python tại `.tools/python311` có chữ ký hợp lệ. Đổi launcher ưu tiên runtime PSF đã có cấu hình `_pth`, giữ fallback `.venv` cho môi trường không có runtime này.
+
+Đã chạy đúng `Run.bat --smoke-test --data-dir ...` từ working directory ngoài dự án, với đường dẫn dữ liệu thử có khoảng trắng và `.venv` vẫn tồn tại. Quan sát tiến trình con xác nhận dùng `.tools/python311/pythonw.exe`; BAT exit 0, app exit 0, tạo thư viện riêng và SQLite integrity ok. Smart App Control được đọc lại ở trạng thái On; không thay đổi chính sách, dấu nguồn hoặc dữ liệu người dùng. Report `.test-data/source-launcher/validation.json`.
+
+## Hai chế độ dịch file — cập nhật source 16/11/2026
+
+Thêm toggle **Dịch cả bài một lượt** và bỏ nút phụ **Tạo bản dịch**. Tắt giữ pipeline song song tối đa 6 đoạn đang chờ mỗi lượt; bật chờ transcript hoàn tất rồi gửi toàn bộ các đoạn trong một lượt Codex, giới hạn chờ 900 giây. Chế độ được ghi vào payload job để phục hồi theo snapshot, không đổi schema dữ liệu. Nút chính dịch lại được bản Trung hoàn chỉnh đã lưu mà không chạy ASR lại.
+
+**90 test đạt trong 22,78 giây.** Các ca mới kiểm tra 14 đoạn được gửi đúng một lượt sau ASR, không gọi Codex khi ASR lỗi/bị hủy, tiếp tục đúng chế độ sau khi thay setting, lỗi dịch và thử lại cùng transcript/version, hủy không lưu kết quả trả về, lưu kết quả nguyên tử, một turn JSON chứa đủ ID và giữ thứ tự timeline. Ca UI xác minh toàn bộ dòng Trung xuất hiện trước khi bắt đầu dịch, toggle ghi nhớ qua navigation/theme, khóa khi bận, nút phụ đã bị bỏ, dùng lại transcript bằng nút chính. Ca phát/tua âm thanh trong lúc dịch vẫn giữ UI phản hồi và SQLite integrity.
+
+224 lượt kiểm tra bố cục (7 trang × 4 kích thước × 2 theme × 4 scale) đều đạt, gồm kiểm tra hình học/chữ của toggle ở cả hai trạng thái. Đã xem ảnh native ở 1440×900 và 1024×700, Sáng/Tối; tám ảnh nằm trong `.test-data/whole-translation/`.
+
+Thử tích hợp thật bằng ba lần âm thanh mẫu Trung, SenseVoiceSmall INT8/Silero VAD và Codex `gpt-6-luna`/`low`: ASR chốt 3 đoạn, đúng 1 lượt dịch gửi cả 3 sau khi transcript hoàn tất, nhận đủ ID/nội dung, giữ âm thanh gốc và mốc giờ; xuất Trung TXT/Việt TXT, SQLite integrity ok. Thời gian lượt thử 7,55 giây chỉ là dữ liệu smoke test, không phải so sánh hiệu năng hay đánh giá chất lượng bản dịch. Report `.test-data/whole-translation/validation.json`. Kết quả của các gói phát hành được ghi riêng theo từng đợt build.
+
 ## Phản hồi ZIP tải từ Release — 16/11/2026
 
 Người dùng báo mở `ChineseTranscriber.exe` thành công, nhưng mở `Run.bat` trong cùng thư mục giải nén hiện Smart App Control với nội dung “files of this type from the internet can be dangerous”. Đọc file thực tế trong Downloads xác nhận EXE có SHA-256 `a853af5bb06f232229fcf34204579da0b379e753bfd28346e4983c6c8852aebc`, đúng bản build sửa Live; BAT có SHA-256 `ffbc3e128c3e75905a0764d63553b28fe7a1fd988babf0c2af26071d3513c703`, khớp BAT trong dist. Cả hai file tải về có `Zone.Identifier` / `ZoneId=3`; BAT tại chỗ không có stream này. Không thay đổi dấu nguồn hoặc chính sách bảo mật trong quá trình đối chiếu.

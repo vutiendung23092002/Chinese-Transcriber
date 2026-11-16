@@ -1,4 +1,4 @@
-"""File ASR producer and independent translator with a durable SQLite outbox."""
+"""File transcription with parallel or whole-transcript translation."""
 from __future__ import annotations
 import json
 import threading
@@ -7,7 +7,8 @@ from .codex import capabilities, find_codex, translate_segments, validate_select
 
 
 def transcribe_translate_job(store, models, audio_id, options, progress, cancel, threads=4,
-                             *, version_id=None, known_models=None):
+                             *, version_id=None, transcript_id=None, known_models=None, translation_mode='parallel'):
+    previous=None
     if version_id:
         version=store.one('SELECT * FROM versions WHERE id=? AND deleted IS NULL',(version_id,))
         if not version or version['audio_id']!=audio_id:
@@ -15,12 +16,23 @@ def transcribe_translate_job(store, models, audio_id, options, progress, cancel,
         transcript=version['transcript_id']
         options={key:version[key] for key in ('model','effort','context')}
         options['glossary']=json.loads(version['glossary'])
+        previous=store.one("SELECT id,payload FROM jobs WHERE kind='transcribe_translate' AND target=? ORDER BY updated DESC LIMIT 1",(version_id,))
+        # A resumed task uses its own snapshot, never the current UI preference.
+        translation_mode=json.loads(previous['payload']).get('translation_mode','parallel') if previous else translation_mode
+    if translation_mode not in ('parallel','whole'):
+        raise ValueError('Chế độ dịch không hợp lệ.')
+    if version_id:
         store.queue_missing_translations(version_id)
     else:
-        transcript=store.new_transcript(audio_id,'SenseVoiceSmall int8 + Silero VAD')
+        if transcript_id:
+            source=store.one('SELECT * FROM transcripts WHERE id=? AND audio_id=? AND deleted IS NULL',(transcript_id,audio_id))
+            if not source or source['status']!='complete' or not store.segments(transcript_id):
+                raise ValueError('Cần bản chép lời hoàn chỉnh thuộc âm thanh này trước khi dịch.')
+            transcript=transcript_id
+        else:
+            transcript=store.new_transcript(audio_id,'SenseVoiceSmall int8 + Silero VAD')
         version_id=store.new_version(audio_id,transcript,**options)
-    previous=store.one("SELECT id FROM jobs WHERE kind='transcribe_translate' AND target=? ORDER BY updated DESC LIMIT 1",(version_id,))
-    payload=dict(audio_id=audio_id,transcript_id=transcript,version_id=version_id)
+    payload=dict(audio_id=audio_id,transcript_id=transcript,version_id=version_id,translation_mode=translation_mode)
     job=store.job('transcribe_translate',version_id,payload,previous['id'] if previous else None)
     store.set_version_status(version_id,'running')
     producer_done=threading.Event(); available=threading.Event(); emit_lock=threading.RLock()
@@ -38,6 +50,14 @@ def transcribe_translate_job(store, models, audio_id, options, progress, cancel,
     def translate():
         active=[]
         try:
+            if translation_mode=='whole':
+                # Do not call Codex, including capability discovery, before ASR
+                # has saved a complete transcript. Failed/cancelled ASR stays local.
+                while not producer_done.wait(.1):
+                    if cancel.is_set(): raise InterruptedError('Đã dừng dịch.')
+                if cancel.is_set(): raise InterruptedError('Đã dừng dịch.')
+                source=store.one('SELECT status FROM transcripts WHERE id=?',(transcript,))
+                if source['status']!='complete': return
             if cancel.is_set(): raise InterruptedError('Đã dừng dịch.')
             executable=find_codex(store.setting('codex_path'))
             actual_models=known_models or capabilities(executable,store.root/'work',cancel)['models']
@@ -47,22 +67,28 @@ def transcribe_translate_job(store, models, audio_id, options, progress, cancel,
                 available.clear()
                 finished=producer_done.is_set()
                 rows=store.segments(transcript,version_id)
-                active=[row for row in rows if row['translation_status']!='complete'][:6]
+                active=[row for row in rows if row['translation_status']!='complete']
+                if translation_mode=='parallel': active=active[:6]
                 if not active:
                     # Read the completion flag BEFORE the outbox snapshot.
                     # A producer finishing just after this SELECT may have
                     # committed another row, so one more read is necessary.
                     if finished: break
                     available.wait(.2); continue
-                for row in active: store.translation_result(version_id,row['id'],'',status='translating')
+                with store.transaction() as db:
+                    db.executemany("UPDATE translations SET status='translating',error='',attempts=attempts+1 WHERE version_id=? AND segment_id=?",
+                                   [(version_id,row['id']) for row in active])
                 emit()
-                previous_text=[dict(zh=row['zh'],vi=row['vi']) for row in rows if row['translation_status']=='complete'][-2:]
+                previous_text=[dict(zh=row['zh'],vi=row['vi']) for row in rows if row['translation_status']=='complete']
+                if translation_mode=='parallel': previous_text=previous_text[-2:]
                 for attempt in range(3):
                     try:
+                        kwargs={'timeout':900} if translation_mode=='whole' else {}
                         result=translate_segments(executable,store.root/'work',actual_models,
                             options['model'],options['effort'],options['context'],options['glossary'],
-                            active,cancel,previous_text)
-                        for item in result: store.translation_result(version_id,item['id'],item['vi'],item['note'])
+                            active,cancel,previous_text,**kwargs)
+                        if cancel.is_set(): raise InterruptedError('Đã dừng dịch.')
+                        store.translation_results(version_id,result)
                         break
                     except InterruptedError: raise
                     except Exception:
@@ -74,8 +100,9 @@ def transcribe_translate_job(store, models, audio_id, options, progress, cancel,
             with store.transaction() as db:
                 db.execute("UPDATE translations SET status='queued' WHERE version_id=? AND status='translating'",(version_id,))
             if not isinstance(error,InterruptedError):
-                for row in active:
-                    store.translation_result(version_id,row['id'],'',status='failed',error=str(error))
+                with store.transaction() as db:
+                    db.executemany("UPDATE translations SET status='failed',error=? WHERE version_id=? AND segment_id=?",
+                                   [(str(error),version_id,row['id']) for row in active])
             emit('translation_error')
 
     emit('started')

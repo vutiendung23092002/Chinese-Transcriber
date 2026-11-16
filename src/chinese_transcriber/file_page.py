@@ -161,6 +161,7 @@ class NotesSwitch(QCheckBox):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setFont(ui_font(15))
+        if not self.isEnabled(): painter.setOpacity(.45)
         y = (self.height() - 24) / 2
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(self.colors['focus'] if self.isChecked() else self.colors['line']))
@@ -169,10 +170,6 @@ class NotesSwitch(QCheckBox):
         painter.drawEllipse(QRectF(21 if self.isChecked() else 3, y + 3, 18, 18))
         painter.setPen(QColor(self.colors['text']))
         painter.drawText(self.rect().adjusted(54, 0, 0, 0), Qt.AlignmentFlag.AlignVCenter, self.text())
-        if self.hasFocus():
-            painter.setPen(QPen(QColor(self.colors['focus']), 1, Qt.PenStyle.DotLine))
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 6, 6)
 
 
 class WorkflowSteps(QWidget):

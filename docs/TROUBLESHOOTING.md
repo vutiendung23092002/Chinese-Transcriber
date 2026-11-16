@@ -2,9 +2,11 @@
 
 ## Chữ Trung tiếp tục xuất hiện nhưng tiếng Việt còn chờ
 
-Trong **Chép lời và dịch**, ASR và dịch là hai luồng độc lập. Dịch có thể chậm hơn ASR; thanh trạng thái cho biết số đoạn đã chốt/đã dịch/còn chờ. Phần chép lời không chờ mạng hoặc phản hồi Codex. Đoạn chờ nằm trong SQLite, không mất khi giao diện chuyển trang.
+Khi toggle **Dịch cả bài một lượt** tắt, ASR và dịch là hai luồng độc lập. Dịch có thể chậm hơn ASR; thanh trạng thái cho biết số đoạn đã chốt/đã dịch/còn chờ. Khi toggle bật, chờ toàn bộ chép lời hoàn tất mới bắt đầu dịch là hành vi dự kiến; tiếng Việt xuất hiện sau khi Codex trả đủ kết quả của lượt dịch. Đoạn chờ nằm trong SQLite, không mất khi giao diện chuyển trang.
 
-Nếu dịch báo lỗi, chép lời vẫn tiếp tục. Chờ tác vụ kết thúc hoặc bấm **Dừng tác vụ**, sau đó chọn **Thư viện → Tiếp tục / thử lại** trên đúng bản dịch. Ứng dụng giữ model/bối cảnh đã dùng, giữ phần đã dịch và tiếp tục phần còn thiếu; nếu ASR cũng chưa xong thì tiếp tục cùng transcript, không tạo thêm bản trùng. Không cần bấm Tạo bản dịch mới để thử lại. Dừng là thao tác có phối hợp, giữ các đoạn đã lưu và chờ lượt gọi đang chạy đóng lại.
+Nếu dịch báo lỗi, chép lời vẫn tiếp tục. Chờ tác vụ kết thúc hoặc bấm **Dừng tác vụ**, sau đó chọn **Thư viện → Tiếp tục / thử lại** trên đúng bản dịch. Ứng dụng giữ chế độ dịch/model/bối cảnh đã dùng, giữ phần đã dịch và tiếp tục phần còn thiếu; nếu ASR cũng chưa xong thì tiếp tục cùng transcript, không tạo thêm bản trùng. Dừng là thao tác có phối hợp, giữ các đoạn đã lưu và chờ lượt gọi đang chạy đóng lại.
+
+Nếu dịch cả bài báo vượt giới hạn hoặc hết thời gian chờ, bản Trung và âm thanh vẫn được giữ. Chế độ này không tự chia bài thành nhiều lượt; chọn **Bản chép lời**, tắt toggle và dùng **Dịch bản chép lời** để tạo một bản dịch song song mới nếu cần. **Tiếp tục / thử lại** luôn dùng chế độ đã lưu của tác vụ cũ.
 
 ## App báo Not Responding khi phát âm thanh trong lúc dịch
 
@@ -65,3 +67,9 @@ Thông báo **“files of this type from the internet can be dangerous”** khi 
 Người dùng xác nhận EXE cùng gói ZIP tải từ Release chạy được dù BAT bị chặn. Kết quả EXE bị chặn `4551` trong lần kiểm tra build trước vẫn được giữ như dữ liệu kiểm thử riêng; không suy rộng kết quả đó cho mọi lần chạy. [Smart App Control](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions) đánh giá độ tin cậy của ứng dụng qua dịch vụ bảo mật và chữ ký.
 
 Bộ cài MSI tạo lối tắt trỏ trực tiếp tới runtime đi kèm và `launch.py`, không cần mở BAT. MSI chưa ký số và vẫn có thể bị chính sách Windows chặn. Không cần tắt Smart App Control khi EXE đã chạy được.
+
+## Run.bat trong thư mục source bị chặn khi mở Python
+
+Kiểm tra đường dẫn file trong log **Event Viewer → Applications and Services Logs → Microsoft → Windows → CodeIntegrity → Operational**. Trong lần chặn đã xác minh ngày 16/11/2026, event 3077/3033 ghi `cmd.exe` mở `.venv\Scripts\pythonw.exe` không đạt yêu cầu chữ ký. BAT trong workspace không có dấu nguồn Internet; đây là trường hợp khác với BAT tải về bị chặn ngay khi mở.
+
+Launcher source đã đổi thứ tự: ưu tiên Python PSF chính thức có chữ ký tại `.tools/python311` nếu có cấu hình `python311._pth`, sau đó mới dùng `.venv`. Bản runtime trong workspace đã được cấu hình đọc dependency ở `.venv/Lib/site-packages` và source ở `src`; không xóa môi trường hoặc dữ liệu. Nếu dùng máy mới, cần chuẩn bị runtime/dependency theo PACKAGING.md hoặc dùng gói phát hành. Thay đổi này không bảo đảm mọi chính sách Windows cho phép mọi runtime và không sửa chính sách bảo mật.

@@ -40,11 +40,16 @@ Chọn Dịch file ghi âm, kéo thả hoặc chọn WAV, MP3, M4A, FLAC, OGG, A
 
 Nhập bối cảnh, chọn bộ thuật ngữ. Trong thẻ **Mô hình & suy luận**, bấm tên để đổi model; bấm hoặc kéo từng nấc để đổi mức suy luận (cũng dùng được phím mũi tên, Home/End). Số nấc tùy model được Codex xác nhận; nút đặt lại đưa về mức mặc định của model đó. Nếu hiện Không khả dụng/Không hỗ trợ/Chưa xác minh, kiểm tra kết nối và chọn lại trước khi dịch.
 
-Khi Codex đã kết nối và có model khả dụng, bấm **Chép lời và dịch**. Đoạn tiếng Trung nào chốt xong sẽ được lưu và đưa ngay vào hàng đợi dịch; chép lời vẫn tiếp tục trong khi dịch đang chạy. Tiếng Việt xuất hiện ở đúng hàng khi có kết quả. Thanh trạng thái cho biết số đoạn đã chốt, đã dịch và còn chờ. Hàng đợi dùng các đoạn đang có, tối đa 6 đoạn mỗi lượt, không đợi chép lời xong toàn bộ file mới dịch.
+Khi Codex đã kết nối và có model khả dụng, chọn chế độ bằng toggle **Dịch cả bài một lượt** dưới phần model rồi bấm **Chép lời và dịch**:
+
+- **Tắt (mặc định):** dịch song song như trước. Đoạn tiếng Trung nào chốt xong được lưu và đưa vào hàng đợi; mỗi lượt lấy tối đa 6 đoạn đang chờ, không đợi chép lời xong toàn bộ file. Tiếng Việt xuất hiện ở đúng hàng khi có kết quả.
+- **Bật:** lưu đầy đủ bản chép lời trước, sau đó gửi tất cả các đoạn trong một lượt dịch Codex. Chưa gửi yêu cầu dịch khi chép lời chưa hoàn tất hoặc bị lỗi/dừng. Kết quả được kiểm tra ID rồi lưu cùng một transaction, giữ nguyên từng dòng/mốc giờ. Giới hạn chờ kết quả là 15 phút mỗi lượt; bài vượt khả năng đầu vào/đầu ra của model sẽ báo lỗi, không tự chia thành các lượt nhỏ.
+
+Toggle ghi nhớ lựa chọn cho lần sau và bị khóa khi có tác vụ/ghi âm. Mỗi tác vụ lưu riêng chế độ, model, mức suy luận, bối cảnh và thuật ngữ; thay đổi lựa chọn cho bài mới không thay đổi chế độ của bài đang phục hồi. Thanh trạng thái phân biệt chép lời, chờ chép lời hoàn tất và dịch cả bài.
 
 Nếu dịch chậm hoặc lỗi, chép lời vẫn tiếp tục và các đoạn chờ được giữ. **Dừng tác vụ** dừng cả hai luồng; vào **Thư viện → Tiếp tục / thử lại** để tiếp tục bản chép lời/bản dịch đó. Những đoạn đã dịch không bị dịch lại, ID/mốc giờ và phiên bản đã lưu được giữ. Nếu chép lời còn thiếu, ứng dụng đọc lại nguồn để tiếp tục, bỏ qua nhận dạng những đoạn đã lưu. Chỉ xuất Việt TXT khi toàn bộ chép lời và dịch đã hoàn tất.
 
-Khi chưa có danh sách model Codex, nút vẫn là **Chép lời tiếng Trung** và chạy cục bộ. Nút **Tạo bản dịch** dùng để dịch bản Trung hoàn chỉnh đã có hoặc tạo bản dịch khác theo model/bối cảnh mới. Mỗi lần bắt đầu chép lời mới hay tạo bản dịch riêng đều giữ lịch sử cũ và âm thanh nguồn. Hai nút không có số thứ tự. Màn Ghi âm trực tiếp dùng cùng thẻ chọn model và suy luận; thiết lập bị khóa trong phiên ghi âm.
+Khi chưa có danh sách model Codex, nút vẫn là **Chép lời tiếng Trung** và chạy cục bộ. Khi đã có bản Trung hoàn chỉnh, chọn **Bản chép lời** trong danh sách phiên bản và kết nối Codex: nút chính đổi thành **Dịch bản chép lời**, dùng bản Trung đã lưu và chế độ đang chọn, không nhận dạng âm thanh lại. Nút phụ **Tạo bản dịch** đã được bỏ. Mỗi bản dịch mới giữ lịch sử cũ và âm thanh nguồn. Màn Ghi âm trực tiếp tiếp tục dịch theo từng đoạn đã chốt, không dùng toggle của Dịch file.
 
 Trong thẻ âm thanh, mở **Xuất văn bản** → **Tiếng Trung (.txt)** hoặc **Tiếng Việt (.txt)** để xuất UTF-8, có mốc thời gian. Chỉ bật xuất Việt khi bản dịch đầy đủ. Tiếp tục/thử lại từ Thư viện để xử lý đoạn còn thiếu.
 

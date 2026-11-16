@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,
     QCheckBox,QInputDialog,QSlider,QProgressBar,QApplication,QSplitter,QPushButton,QSpacerItem,QSizePolicy)
 from .window import MainWindow
 from .widgets import PAGES,label,button,tonal_button,box,card,clear,ComboBox
-from .file_page import FilePage, FilenameComboBox, transcription_context_styles, audio_thumbnail
+from .file_page import FilePage, FilenameComboBox, NotesSwitch, transcription_context_styles, audio_thumbnail
 from .live_page import LivePage
 from .library_page import LibraryPage, library_context_styles
 from .glossary_page import GlossaryPage, glossary_context_styles
@@ -182,8 +182,7 @@ class WorkspaceWindow(MainWindow):
         compact=self.apply_options_density()
         for control in (self.file_import_button,self.file_source):
             control.ensurePolished(); control.setFixedHeight(42 if compact else 48)
-        for control in (self.transcribe_button,self.translate_button):
-            control.ensurePolished(); control.setFixedHeight(40 if compact else 46)
+        self.transcribe_button.ensurePolished(); self.transcribe_button.setFixedHeight(40 if compact else 46)
         self.file_page.set_compact(compact)
 
     def apply_library_density(self):
@@ -301,12 +300,21 @@ class WorkspaceWindow(MainWindow):
         source.activated.connect(lambda _:self.open_audio(source.currentData()) if source.currentData() else None)
         self.context_layout.addWidget(source)
         self.options()
+        self.file_translation_toggle=NotesSwitch(self.colors)
+        self.file_translation_toggle.setObjectName('file_translation_mode')
+        self.file_translation_toggle.setText('Dịch cả bài một lượt')
+        self.file_translation_toggle.setAccessibleName('Chép lời xong, dịch cả bài một lượt')
+        self.file_translation_toggle.setChecked(self.store.setting('file_translation_mode','parallel')=='whole')
+        self.file_translation_toggle.setToolTip('Bật: chép lời hoàn tất rồi gửi toàn bộ bản chép lời trong một lượt dịch. Tắt: dịch song song các đoạn đã chốt.')
+        self.file_translation_hint=label('','muted',True)
+        self.file_translation_hint.setStyleSheet(f"font-size:12px;color:{self.colors['muted']}")
+        self.file_translation_toggle.toggled.connect(self.file_translation_mode_changed)
+        self.context_layout.addWidget(self.file_translation_toggle)
+        self.context_layout.addWidget(self.file_translation_hint)
+        self.file_translation_mode_changed(self.file_translation_toggle.isChecked())
         self.transcribe_button=button('Chép lời tiếng Trung',self.transcribe,True)
         self.transcribe_button.setIcon(icon('audio',self.colors['on_primary'],22)); self.transcribe_button.setIconSize(QSize(22,22))
-        self.translate_button=button('Tạo bản dịch',self.translate)
-        self.translate_button.setIcon(icon('translate',self.colors['muted'],22)); self.translate_button.setIconSize(QSize(22,22))
         self.context_layout.addWidget(self.transcribe_button)
-        self.context_layout.addWidget(self.translate_button)
         audio=self.store.one('SELECT * FROM audio WHERE id=?',(self.audio_id,)) if self.audio_id else None
         self.file_page=FilePage(self,audio)
         self.timeline=self.file_page.timeline; self.notes_toggle=self.file_page.notes_toggle
@@ -317,6 +325,10 @@ class WorkspaceWindow(MainWindow):
         self.fill_timeline()
         self.refresh_player()
         if audio: self.load_waveform(audio)
+
+    def file_translation_mode_changed(self,whole):
+        self.store.set_setting('file_translation_mode','whole' if whole else 'parallel')
+        self.file_translation_hint.setText('Chép lời xong mới bắt đầu dịch.' if whole else 'Dịch song song các đoạn đã chốt.')
 
     def fill_timeline(self):
         if not hasattr(self,'timeline') or self.page not in ('file','live'): return
@@ -343,14 +355,14 @@ class WorkspaceWindow(MainWindow):
         ready=bool(transcript and transcript['status']=='complete' and rows)
         idle=not self.is_busy and not self.recording
         self.transcribe_button.setEnabled(idle)
-        self.transcribe_button.setText('Chép lời và dịch' if self.models else 'Chép lời tiếng Trung')
-        self.transcribe_button.setToolTip('Chép lời tiếp tục độc lập; các đoạn đã chốt được dịch song song.' if self.models else 'Chép lời cục bộ. Kết nối Codex để tự dịch các đoạn đã chốt.')
-        self.translate_button.setEnabled(idle and ready)
+        self.file_translation_toggle.setEnabled(idle)
+        self.transcribe_button.setText('Dịch bản chép lời' if self.models and ready and not self.version_id else 'Chép lời và dịch' if self.models else 'Chép lời tiếng Trung')
+        self.transcribe_button.setToolTip(self.file_translation_toggle.toolTip() if self.models else 'Chép lời cục bộ. Kết nối Codex để dịch bản chép lời đã lưu.')
         self.file_page.export_zh.setEnabled(bool(rows))
         self.file_page.export_vi.setEnabled(bool(version and version['status']=='complete' and ready and all(row['translation_status']=='complete' for row in rows)))
         steps=self.file_page.steps
         steps.completed=3 if version and version['status']=='complete' else 2 if ready else 1 if self.audio_id else 0
-        steps.setToolTip('Chép lời: '+state_name(transcript['status'])+' · '+transcript['engine']+' · Mốc giờ theo ranh giới lời nói' if transcript else 'Chọn âm thanh → Chép lời tiếng Trung → Tạo bản dịch')
+        steps.setToolTip('Chép lời: '+state_name(transcript['status'])+' · '+transcript['engine']+' · Mốc giờ theo ranh giới lời nói' if transcript else 'Chọn âm thanh → Chép lời → Dịch tiếng Việt')
         steps.update()
         table=self.file_page.timeline
         table.empty.setVisible(not rows)
@@ -634,6 +646,9 @@ class WorkspaceWindow(MainWindow):
         if self.is_busy: self.error('Một tác vụ đang chạy. Hãy chờ hoặc dừng tác vụ trước.'); return
         if not self.audio_id: self.choose_audio(); return
         if self.recording: self.error('Hãy kết thúc phiên ghi âm trước.'); return
+        source=self.store.one('SELECT status FROM transcripts WHERE id=?',(self.transcript_id,)) if self.transcript_id else None
+        if self.models and not self.version_id and source and source['status']=='complete' and self.store.segments(self.transcript_id):
+            self.translate(); return
         if self.transcript_id and self.store.segments(self.transcript_id):
             if QMessageBox.question(self,'Chép lời lại','Tạo bản chép lời mới? Các bản cũ được giữ nguyên.',QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,QMessageBox.StandardButton.No)!=QMessageBox.StandardButton.Yes: return
         self.capture_options(); self.cancel_event.clear(); audio_id=self.audio_id
@@ -641,8 +656,9 @@ class WorkspaceWindow(MainWindow):
             try: options=self.translation_options()
             except Exception as error: self.error(error); return
             known_models=list(self.models)
+            translation_mode=self.store.setting('file_translation_mode','parallel')
             self.submit(lambda emit:transcribe_translate_job(self.store,self.model_manager,audio_id,options,
-                emit,self.cancel_event,self.store.setting('asr_threads',4),known_models=known_models),
+                emit,self.cancel_event,self.store.setting('asr_threads',4),known_models=known_models,translation_mode=translation_mode),
                 self.file_pipeline_done,self.file_pipeline_event)
             return
         def progress(item):
@@ -820,6 +836,7 @@ class WorkspaceWindow(MainWindow):
         return dict(model=model,effort=effort,context=self.store.setting('context',''),glossary=json.loads(glossary['entries']) if glossary else [])
 
     def translate(self):
+        if self.is_busy: self.error('Một tác vụ đang chạy. Hãy chờ hoặc dừng tác vụ trước.'); return
         if self.recording: self.error('Phiên ghi âm đang chạy; bản dịch trực tiếp được xử lý theo câu đã chốt.'); return
         if not self.transcript_id or not self.store.segments(self.transcript_id): self.error('Chép lời tiếng Trung trước khi dịch.'); return
         try: options=self.translation_options()
@@ -827,13 +844,10 @@ class WorkspaceWindow(MainWindow):
         source=self.store.one('SELECT status FROM transcripts WHERE id=?',(self.transcript_id,))
         if source['status']!='complete': self.error('Bản chép lời chưa đầy đủ. Chép lời lại hoặc phục hồi tác vụ trước khi dịch.'); return
         audio_id,transcript=self.audio_id,self.transcript_id; self.cancel_event.clear()
-        def work(progress):
-            executable=find_codex(self.store.setting('codex_path'))
-            actual=capabilities(executable,self.store.root/'work',self.cancel_event)
-            validate_selection(actual['models'],options['model'],options['effort'])
-            version=self.store.new_version(audio_id,transcript,**options)
-            return translate_version(self.store,executable,version,actual['models'],progress,self.cancel_event)
-        self.submit(work,lambda identifier:self.open_audio(audio_id,identifier),self.translation_progress)
+        known_models=list(self.models); translation_mode=self.store.setting('file_translation_mode','parallel')
+        self.submit(lambda emit:transcribe_translate_job(self.store,self.model_manager,audio_id,options,
+            emit,self.cancel_event,self.store.setting('asr_threads',4),transcript_id=transcript,
+            known_models=known_models,translation_mode=translation_mode),self.file_pipeline_done,self.file_pipeline_event)
 
     def translation_progress(self,item):
         self.version_id=item['version_id']
@@ -859,6 +873,8 @@ class WorkspaceWindow(MainWindow):
             self.fill_timeline()
         phase=f"Đang chép lời {timestamp(item['seconds'])}" if not item['asr_done'] else f"Đã chốt {item['recognized']} đoạn"
         translated=f"Đã dịch {item['translated']}/{item['recognized']} · Chờ {item['pending']} đoạn"
+        if item.get('translation_mode')=='whole':
+            translated='Chờ chép lời hoàn tất để dịch cả bài' if not item['asr_done'] else 'Đang dịch cả bài một lượt' if item['pending'] else f"Đã dịch {item['translated']}/{item['recognized']} đoạn"
         if item['translation_error']: translated=f"Dịch tạm dừng · {item['pending']} đoạn đã lưu để thử lại"
         self.statusBar().showMessage(phase+' · '+translated)
 

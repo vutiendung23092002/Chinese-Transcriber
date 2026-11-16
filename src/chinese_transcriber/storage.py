@@ -210,6 +210,14 @@ class Store:
               WHERE version_id=? AND segment_id=?''',(text,note,status,error,version_id,segment_id)).rowcount
             if count!=1: raise ValueError('ID đoạn dịch không thuộc phiên bản này.')
 
+    def translation_results(self,version_id,results):
+        """Commit a validated Codex response together; never save half a turn."""
+        with self.transaction() as db:
+            for item in results:
+                count=db.execute("""UPDATE translations SET vi=?,note=?,status='complete',error='',attempts=attempts+1
+                  WHERE version_id=? AND segment_id=?""",(item['vi'],item['note'],version_id,item['id'])).rowcount
+                if count!=1: raise ValueError('ID đoạn dịch không thuộc phiên bản này.')
+
     def set_version_status(self,identifier,status):
         with self.transaction() as db:
             db.execute('UPDATE versions SET status=? WHERE id=?',(status,identifier))
