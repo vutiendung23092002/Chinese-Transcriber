@@ -9,7 +9,8 @@ Bản Windows x64 cập nhật ngày 16/11/2026. Mã nguồn đúng bản ZIP n�
 
 - Sửa đường phân cách 1 px bị hiện thành cửa sổ riêng trong tích tắc khi mở tab Live.
 - EXE trong ZIP đã được build lại và xác minh chứa bản sửa; `Run.bat` cũng dùng mã nguồn đã sửa.
-- **EXE mới hiện bị Windows Application Control chặn (`4551`) trên máy kiểm tra.** Chưa xác nhận khởi động thành công bằng EXE mới; có thể dùng `Run.bat` đi kèm. Không thay đổi chính sách bảo vệ Windows.
+- EXE bị Windows Application Control chặn (`4551`) trong lần kiểm tra build. Sau đó người dùng xác nhận **EXE từ ZIP tải trên Release chạy được**, trong khi mở `Run.bat` bị Smart App Control chặn. Đây là hai kết quả được ghi nhận riêng; không bảo đảm file nào cũng chạy trên mọi máy.
+- **Với ZIP, ưu tiên mở `ChineseTranscriber.exe`.** `Run.bat` tải từ Internet có thể bị chặn ngay khi mở, dù runtime Python đi kèm có chữ ký. Không cần chuyển sang BAT khi EXE đang chạy bình thường.
 
 ## Tải và chạy
 
@@ -28,7 +29,7 @@ Bản Windows x64 cập nhật ngày 16/11/2026. Mã nguồn đúng bản ZIP n�
 
 1. Trong **Assets**, tải `ChineseTranscriber-1.0.0-win-x64.zip`.
 2. Giải nén toàn bộ ZIP; giữ nguyên các thư mục đi kèm.
-3. Mở `ChineseTranscriber.exe`. Gói có thêm `Run.bat` dùng runtime Python chính thức đi kèm.
+3. Mở `ChineseTranscriber.exe`. Giữ `Run.bat` như launcher phụ; đây không phải cách khắc phục Smart App Control được bảo đảm. File BAT tải từ Internet có thể bị chặn dù EXE chạy được.
 4. Để dịch sang tiếng Việt, máy cần có Codex CLI và tài khoản ChatGPT đã đăng nhập. Vào **Cài đặt & Codex → Kiểm tra kết nối**. Codex CLI và thông tin đăng nhập không được đóng gói.
 
 Gói đã kèm Qt, FFmpeg, font và ba model SenseVoiceSmall INT8, Streaming Paraformer INT8, Silero VAD. Chép lời chạy cục bộ bằng CPU; không cần cài thêm Python, Docker, WSL hoặc CUDA.
@@ -40,11 +41,12 @@ Các file `.sha256` trong Assets dùng để kiểm tra ZIP hoặc MSI sau khi t
 - Toàn bộ 78 test source đạt, gồm ca bắt cửa sổ thừa ngay lúc chuyển sang Live.
 - 224 lượt kiểm tra bố cục ở các kích thước, theme và mức scale đều đạt.
 - Ca kiểm tra cửa sổ thừa đạt trên backend Qt Windows; launcher Python trong gói được kiểm tra thêm qua sáu lượt chuyển trang/kích thước/theme và không tạo cửa sổ thừa.
-- Mã khởi tạo Live trong EXE khớp mã nguồn đã sửa. Kết quả này không thay thế kiểm tra khởi động EXE, đang bị Windows chặn như ghi ở trên.
+- Mã khởi tạo Live trong EXE khớp mã nguồn đã sửa. Bước chạy EXE kiểm thử tự động bị Windows chặn; người dùng sau đó báo EXE tải về chạy được. Phản hồi đó chưa thay thế kiểm thử tích hợp EXE trên nhiều máy.
+- Bản `Run.bat` trong Downloads khớp SHA-256 với bản build, nhưng có `Zone.Identifier` với `ZoneId=3` (nguồn Internet); bản build tại chỗ không có dấu này. Thông báo người dùng chụp phù hợp với việc Windows chặn BAT theo nguồn tải. [Tài liệu Microsoft về dấu nguồn Internet](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/unblock-file#description).
 - Chi tiết kết quả hiện tại và các kiểm tra ASR/Codex/codec của bản build trước nằm trong `docs/VALIDATION.md` và `BUILD-INFO.json` của gói.
 
 ## Giới hạn của bản thử nghiệm
 
 - **Live/thu âm trực tiếp chưa hoàn thiện**; các kiểm tra bằng WAV phát lại chưa thay thế nghiệm thu microphone thực. Kết quả thu qua microphone Bluetooth/loa điện thoại chưa được bảo đảm.
-- EXE chưa có chữ ký Authenticode; bản cập nhật hiện bị Application Control chặn trên máy kiểm tra. Khả năng chạy phụ thuộc chính sách và đánh giá an toàn của Windows trên từng máy.
+- EXE và MSI chưa có chữ ký Authenticode của nhà phát hành. EXE, MSI và BAT có thể bị Windows đánh giá khác nhau; kiểm tra chạy được tại chỗ không bảo đảm bản tải từ Internet được phép mở. Xem [Smart App Control FAQ của Microsoft](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions).
 - Chưa có đánh giá CER/WER trên tập bài giảng gán nhãn. Hiệu năng phụ thuộc phần cứng và dữ liệu âm thanh. Mốc giờ ở cấp đoạn, chưa căn chỉnh từng từ.

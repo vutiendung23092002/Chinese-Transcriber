@@ -30,6 +30,8 @@ Bản EXE trước từ commit 9fa392c, SHA-256 bbc7e759b372eee933f8d23801c4a781
 
 Gói phát hành có thêm **Run.bat**, `python/` (runtime PSF chính thức có chữ ký), `src/` và `assets/`. Launcher chạy source bằng Python chính thức và dùng dependency native từ _internal. Không cần cài Python lên máy; vẫn là cùng ứng dụng PySide6 native. Có thể mở trực tiếp ChineseTranscriber.exe; giữ nguyên toàn bộ thư mục để chương trình tìm đúng dependency và model.
 
+**Launcher BAT không bảo đảm tránh được Smart App Control.** Người dùng đã xác nhận EXE từ ZIP tải trên Release chạy được, còn mở BAT hiện thông báo chặn loại file từ Internet. Đối chiếu bản trong Downloads: SHA-256 EXE khớp `a853af5b…`, BAT khớp bản build nhưng có `Zone.Identifier` / `ZoneId=3`; BAT tại chỗ không có dấu nguồn này. Không coi test gọi trực tiếp Python bằng subprocess là test mở BAT từ Explorer sau khi tải về. Chữ ký của Python không ký cho BAT. Hướng dẫn người dùng ZIP ưu tiên EXE, MSI dùng Start Menu; xem [xử lý Smart App Control](TROUBLESHOOTING.md#smart-app-control-chặn-runbat-nhưng-exe-vẫn-chạy).
+
 Sau build, `python scripts/prepare_python_fallback.py` thêm launcher khi workspace có runtime PSF embeddable tại .tools/python311; build_windows.ps1 tự thực hiện bước này nếu có. Không dùng Python uv đang bị policy chặn. Chạy lại prepare_distribution.py sau cùng để checksum bao gồm launcher.
 
 `SHA256SUMS.txt` liệt kê hash từng file trong gói, được sinh sau khi chép model và tài liệu. Icon EXE lấy từ logo Nhịp lời đã duyệt. Font Noto và bản OFL được kèm để có fallback tiếng Trung/Việt.

@@ -54,4 +54,14 @@ Không xóa recordings/ khi chưa phục hồi. Dọn dung lượng hoặc chọ
 
 ## Portable
 
-Giải nén toàn bộ folder và mở **ChineseTranscriber.exe** hoặc **Run.bat**. Không kéo riêng launcher hoặc EXE ra khỏi các thư mục đi kèm. EXE cập nhật sửa thanh nháy ở Live hiện bị Application Control chặn 4551 trên máy kiểm tra. Nếu Windows báo chặn, dùng Run.bat đi kèm: launcher chạy source đã sửa bằng runtime Python PSF chính thức có chữ ký, không cần cài Python. Không thay đổi chính sách bảo vệ Windows. Xem PACKAGING.md để phân biệt các kết quả kiểm thử của EXE và Python launcher.
+Giải nén toàn bộ folder và mở **ChineseTranscriber.exe**. Không kéo riêng launcher hoặc EXE ra khỏi các thư mục đi kèm. Với MSI, dùng lối tắt **Chinese Transcriber** trong Start Menu. Không cần cài Python riêng. Xem PACKAGING.md để phân biệt các kết quả kiểm thử của EXE và Python launcher.
+
+## Smart App Control chặn Run.bat nhưng EXE vẫn chạy
+
+Nếu **ChineseTranscriber.exe** chạy bình thường, tiếp tục mở EXE; không cần chạy thêm `Run.bat`. BAT là launcher phụ, không phải bước bắt buộc.
+
+Thông báo **“files of this type from the internet can be dangerous”** khi mở BAT cho thấy Windows đang chặn loại file tải từ Internet. Trong trường hợp đã kiểm tra ngày 16/11/2026, `Run.bat` trong Downloads có cùng SHA-256 với bản build, nhưng mang `Zone.Identifier` với `ZoneId=3`; file build tại chỗ không có dấu đó. Microsoft xác nhận giá trị này biểu thị nguồn Internet trong [tài liệu về Zone.Identifier](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/unblock-file#description). Chữ ký của `pythonw.exe` không áp dụng cho `Run.bat`, nên Python có chữ ký không bảo đảm BAT được phép mở.
+
+Người dùng xác nhận EXE cùng gói ZIP tải từ Release chạy được dù BAT bị chặn. Kết quả EXE bị chặn `4551` trong lần kiểm tra build trước vẫn được giữ như dữ liệu kiểm thử riêng; không suy rộng kết quả đó cho mọi lần chạy. [Smart App Control](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions) đánh giá độ tin cậy của ứng dụng qua dịch vụ bảo mật và chữ ký.
+
+Bộ cài MSI tạo lối tắt trỏ trực tiếp tới runtime đi kèm và `launch.py`, không cần mở BAT. MSI chưa ký số và vẫn có thể bị chính sách Windows chặn. Không cần tắt Smart App Control khi EXE đã chạy được.

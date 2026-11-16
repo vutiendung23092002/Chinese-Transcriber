@@ -2,6 +2,12 @@
 
 Ngày 14/11/2026. Windows 11 x64, Intel Core i7-12700F (20 logical CPU), RAM 31,8 GiB. Python 3.11.9, Qt/PySide6 6.12.0, sherpa-onnx 1.13.8. ASR giới hạn 4 luồng CPU, VAD 1 luồng; không CUDA, Docker hoặc WSL.
 
+## Phản hồi ZIP tải từ Release — 16/11/2026
+
+Người dùng báo mở `ChineseTranscriber.exe` thành công, nhưng mở `Run.bat` trong cùng thư mục giải nén hiện Smart App Control với nội dung “files of this type from the internet can be dangerous”. Đọc file thực tế trong Downloads xác nhận EXE có SHA-256 `a853af5bb06f232229fcf34204579da0b379e753bfd28346e4983c6c8852aebc`, đúng bản build sửa Live; BAT có SHA-256 `ffbc3e128c3e75905a0764d63553b28fe7a1fd988babf0c2af26071d3513c703`, khớp BAT trong dist. Cả hai file tải về có `Zone.Identifier` / `ZoneId=3`; BAT tại chỗ không có stream này. Không thay đổi dấu nguồn hoặc chính sách bảo mật trong quá trình đối chiếu.
+
+Đây là phản hồi khởi động EXE của người dùng và kiểm tra chỉ đọc metadata/hash, không phải lượt chạy tích hợp EXE mới. Kết quả `4551` trước đó và test launcher Python/MSI bên dưới được giữ nguyên theo từng lần kiểm tra. Chưa thử mở MSI tải bằng trình duyệt từ Explorer; test MSI tại chỗ không bảo đảm kết quả của file mang dấu Internet. Đã sửa hướng dẫn để không coi BAT là phương án chạy chắc chắn khi bị Smart App Control chặn.
+
 ## Bộ cài MSI — 16/11/2026
 
 MSI thử nghiệm được tạo từ ZIP portable đã có bản sửa Live (source 80567cb), gồm 1.222 file. Kiểm tra tích hợp dùng thư mục cài và Start Menu riêng trong workspace: cài exit 0; hash của mọi file trong manifest khớp, tất cả file của ZIP có mặt; lối tắt trỏ đúng runtime Python đã cài và `launch.py`; launcher khởi động/thoát exit 0 và SQLite integrity ok. Đường dẫn mặc định `%LOCALAPPDATA%\Programs\ChineseTranscriber` được xác minh riêng bằng bước tính chi phí của Windows Installer, không cài vào profile thật.
